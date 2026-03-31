@@ -1,0 +1,24 @@
+server:
+  service:
+    type: NodePort
+  extraArgs:
+    - --insecure
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    hostname: argocd.local
+    paths:
+      - /
+    pathType: Prefix
+    annotations:
+      kubernetes.io/ingress.class: nginx
+controller:
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      memory: 256Mi
+configs:
+  secret:
+    argocdServerAdminPassword: "$2b$12$OjazxTzRhqYGBwEj23tHdeqcHhZrrCYIlUvNlF9C/peAf6mR7Lp5a"
+    createSecret: true

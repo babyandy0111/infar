@@ -1,0 +1,22 @@
+adminPassword: admin
+service:
+  type: NodePort
+persistence:
+  enabled: true
+  size: 2Gi
+# 啟用 Ingress
+ingress:
+  enabled: true
+  hosts:
+    - grafana.local
+  ingressClassName: nginx
+# 預設連結 Loki
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Loki
+        type: loki
+        access: proxy
+        url: http://loki-gateway.observability.svc.cluster.local
+        isDefault: true

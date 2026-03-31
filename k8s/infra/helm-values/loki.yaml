@@ -1,0 +1,39 @@
+loki:
+  auth_enabled: false
+  commonConfig:
+    replication_factor: 1
+  storage:
+    type: 'filesystem'
+  # 關閉所有可能衝突的目標
+  schemaConfig:
+    configs:
+      - from: 2024-04-01
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: index_
+          period: 24h
+
+deploymentMode: SingleBinary
+
+singleBinary:
+  replicas: 1
+
+# 徹底關閉其它模式的副本
+backend:
+  replicas: 0
+read:
+  replicas: 0
+write:
+  replicas: 0
+
+# 關閉不需要的組件
+lokiCanary:
+  enabled: false
+test:
+  enabled: false
+resultsCache:
+  enabled: false
+chunksCache:
+  enabled: false
