@@ -83,11 +83,20 @@ EOF
 # 3. 安裝 Service Mesh (Linkerd)
 # ==========================================
 echo "3. 安裝 Linkerd Service Mesh..."
+export PATH=$PATH:$HOME/.linkerd2/bin
 if ! kubectl get namespace linkerd &> /dev/null; then
+    echo "   - 補齊 Gateway API CRDs (Linkerd 依賴)..."
+    kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.4.0/standard-install.yaml > /dev/null
+    
     echo "   - 安裝 Linkerd CRDs 與 Control Plane (請耐心等候)..."
     linkerd install --crds | kubectl apply -f -
-    linkerd install | kubectl apply -f -
+    # Minikube Docker Driver 必須開啟 proxyInit.runAsRoot
+    linkerd install --set proxyInit.runAsRoot=true | kubectl apply -f -
+    
+    echo "   - 安裝 Linkerd Viz 視覺化擴展..."
     linkerd viz install | kubectl apply -f -
+    
+    # 等待控制平面就緒
     linkerd check --wait 5m
 else
     echo "   - Linkerd 已安裝。"

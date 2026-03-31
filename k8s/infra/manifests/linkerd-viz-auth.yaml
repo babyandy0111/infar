@@ -1,0 +1,42 @@
+---
+# 定義連向 Linkerd Prometheus 的「門」
+apiVersion: policy.linkerd.io/v1beta3
+kind: Server
+metadata:
+  name: prometheus-admin
+  namespace: linkerd-viz
+spec:
+  podSelector:
+    matchLabels:
+      app: prometheus
+  port: 9090
+  proxyProtocol: HTTP/1
+
+---
+# 發放通行證給 observability 空間
+apiVersion: policy.linkerd.io/v1alpha1
+kind: AuthorizationPolicy
+metadata:
+  name: allow-grafana-from-observability
+  namespace: linkerd-viz
+spec:
+  targetRef:
+    group: policy.linkerd.io
+    kind: Server
+    name: prometheus-admin
+  # 允許來自 observability 空間的所有 Pod 連線
+  requiredAuthenticationRefs:
+    - name: any-unauthenticated
+      kind: NetworkAuthentication
+      group: policy.linkerd.io
+---
+# 建立一個基礎的網路授權
+apiVersion: policy.linkerd.io/v1alpha1
+kind: NetworkAuthentication
+metadata:
+  name: any-unauthenticated
+  namespace: linkerd-viz
+spec:
+  networks:
+    - cidr: 0.0.0.0/0
+    - cidr: ::/0

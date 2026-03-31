@@ -1,0 +1,45 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: grafana-import-dashboards
+  namespace: observability
+spec:
+  template:
+    spec:
+      containers:
+      - name: importer
+        image: alpine
+        command:
+        - /bin/sh
+        - -c
+        - |
+          apk add --no-cache curl jq > /dev/null
+          echo "等待 Grafana 啟動..."
+          while ! curl -s -f -o /dev/null http://admin:admin@grafana.observability.svc.cluster.local/api/health; do
+            sleep 2
+          done
+          echo "Grafana 已啟動，開始匯入 Dashboard..."
+          
+          for file in /dashboards/*.json; do
+            filename=$(basename "$file")
+            echo "匯入 $filename..."
+            
+            # 這是標準的 Grafana API 匯入方式：提供 JSON，並指定變數 'datasource' 對應到我們的 'Prometheus'
+            PAYLOAD=$(cat "$file" | jq '{dashboard: . | (.title = "Linkerd - " + .title), overwrite: true, inputs: [{"name": "datasource", "type": "datasource", "pluginId": "prometheus", "value": "Prometheus"}]}')
+            
+            curl -s -X POST -H "Content-Type: application/json" \
+                 -u "admin:admin" \
+                 -d "$PAYLOAD" \
+                 http://grafana.observability.svc.cluster.local/api/dashboards/import
+            echo ""
+          done
+          echo "匯入完成！"
+        volumeMounts:
+        - name: dashboards
+          mountPath: /dashboards
+      restartPolicy: Never
+      volumes:
+      - name: dashboards
+        configMap:
+          name: linkerd-grafana-dashboards
+  backoffLimit: 4
