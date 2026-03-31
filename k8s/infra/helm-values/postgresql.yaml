@@ -1,11 +1,16 @@
+# 移除有問題的 tag 設定，讓 Chart 使用它內建的預設穩定版本 (18.3.0)
 image:
-  # 固定 PostgreSQL 映像檔版本，避免 :latest 警告
-  tag: 16.2.0-debian-12-r12
+  registry: docker.io
+  repository: bitnami/postgresql
 
 auth:
   database: "infar_db"
   username: "admin"
-  password: "password123"
+  # 移除明文密碼，改用 K8s Secret
+  existingSecret: "infra-secrets"
+  secretKeys:
+    adminPasswordKey: "postgresql-password"
+    userPasswordKey: "postgresql-password"
 
 architecture: standalone
 

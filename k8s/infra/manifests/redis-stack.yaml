@@ -40,8 +40,13 @@ spec:
             - name: redis
               containerPort: 6379
           env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: infra-secrets
+                  key: redis-password
             - name: REDIS_ARGS
-              value: "--requirepass redispassword"
+              value: "--requirepass $(REDIS_PASSWORD)"
           resources:
             limits:
               memory: 256Mi

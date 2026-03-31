@@ -13,7 +13,7 @@ ARGOCD_ADMIN_PASSWORD="admin123"
 echo "🚀 開始設定 K8s 基礎設施 (Helm Repositories)..."
 
 # ==========================================
-# 依賴檢查：Python, bcrypt, helm
+# 0. 依賴檢查：Python, bcrypt, helm, linkerd
 # ==========================================
 echo "0. 檢查系統依賴與啟動 Addons..."
 minikube addons enable ingress
@@ -21,6 +21,19 @@ minikube addons enable ingress
 if ! command -v helm &> /dev/null; then
     echo "❌ 找不到 helm，請先安裝 Helm (例如: brew install helm)。"
     exit 1
+fi
+
+if ! command -v linkerd &> /dev/null; then
+    echo "⚠️ 找不到 linkerd CLI，開始自動安裝..."
+    curl --proto '=https' --tlsv1.2 -sSfL https://run.linkerd.io/install | sh
+    export PATH=$PATH:$HOME/.linkerd2/bin
+    if ! command -v linkerd &> /dev/null; then
+        echo "❌ 安裝 linkerd 失敗，請手動檢查環境。"
+        exit 1
+    fi
+    echo "✅ linkerd CLI 安裝完成。"
+else
+    echo "✅ linkerd CLI 已安裝。"
 fi
 
 if ! command -v python3 &> /dev/null; then
@@ -31,20 +44,39 @@ fi
 if ! python3 -c "import bcrypt" &> /dev/null; then
     echo "⚠️ 找不到 Python bcrypt 模組，開始自動安裝..."
     pip3 install bcrypt
-    if [ $? -ne 0 ]; then
-        echo "❌ 安裝 bcrypt 失敗，請手動檢查環境。"
-        exit 1
-    fi
     echo "✅ bcrypt 安裝完成。"
+fi
+
+# ==========================================
+# 1. 建立基礎設施專用的 Namespaces 與 Service Mesh
+# ==========================================
+echo "1. 建立 Namespaces..."
+kubectl create namespace infra --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
+kubectl create namespace observability --dry-run=client -o yaml | kubectl apply -f -
+
+# 標記 infra namespace 讓 Linkerd 自動注入 Sidecar (實現 Service Mesh)
+kubectl label namespace infra linkerd.io/inject=enabled --overwrite
+
+# ==========================================
+# 2. 建立動態 Secrets (安全管理)
+# ==========================================
+echo "2. 初始化 Secrets (安全管理)..."
+if ! kubectl get secret infra-secrets -n infra &> /dev/null; then
+    echo "   - 產生高強度隨機密碼並建立 infra-secrets..."
+    PG_PASS=$(openssl rand -base64 12)
+    REDIS_PASS=$(openssl rand -base64 12)
+    kubectl create secret generic infra-secrets -n infra \
+        --from-literal=postgresql-password="$PG_PASS" \
+        --from-literal=redis-password="$REDIS_PASS"
 else
-    echo "✅ bcrypt 已安裝。"
+    echo "   - infra-secrets 已存在，保留現有密碼。"
+    PG_PASS=$(kubectl get secret infra-secrets -n infra -o jsonpath="{.data.postgresql-password}" | base64 --decode)
+    REDIS_PASS=$(kubectl get secret infra-secrets -n infra -o jsonpath="{.data.redis-password}" | base64 --decode)
 fi
 
 # 動態產生 ArgoCD 的 Bcrypt 雜湊值
-echo "🔄 正在產生 ArgoCD 管理員密碼雜湊..."
 ARGOCD_ADMIN_HASH=$(python3 -c "import bcrypt; print(bcrypt.hashpw(b\"$ARGOCD_ADMIN_PASSWORD\", bcrypt.gensalt()).decode())")
-
-# 使用一個臨時檔來安全傳遞密碼
 TEMP_ARGOCD_VALUES=$(mktemp)
 cat <<EOF > "$TEMP_ARGOCD_VALUES"
 configs:
@@ -53,51 +85,55 @@ configs:
 EOF
 
 # ==========================================
-# 加入 Helm Repositories
+# 3. 安裝 Service Mesh (Linkerd)
 # ==========================================
-echo "1. 加入 Helm Repositories..."
+echo "3. 安裝 Linkerd Service Mesh..."
+if ! kubectl get namespace linkerd &> /dev/null; then
+    echo "   - 安裝 Linkerd CRDs 與 Control Plane (請耐心等候)..."
+    linkerd install --crds | kubectl apply -f -
+    linkerd install | kubectl apply -f -
+    # 等待控制平面就緒
+    linkerd check --wait 5m
+else
+    echo "   - Linkerd 已安裝。"
+fi
+
+# ==========================================
+# 4. 加入 Helm Repositories
+# ==========================================
+echo "4. 加入 Helm Repositories..."
 helm repo add bitnami https://charts.bitnami.com/bitnami
 helm repo add argo https://argoproj.github.io/argo-helm
 helm repo add grafana https://grafana.github.io/helm-charts
-helm repo update
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update > /dev/null
 
 # ==========================================
-# 建立基礎設施專用的 Namespaces
+# 5. 部署服務 (固定版本號，確保穩定性)
 # ==========================================
-echo "2. 建立 Namespaces..."
-kubectl create namespace infra --dry-run=client -o yaml | kubectl apply -f -
-kubectl create namespace argocd --dry-run=client -o yaml | kubectl apply -f -
-kubectl create namespace observability --dry-run=client -o yaml | kubectl apply -f -
-
-# ==========================================
-# 部署服務 (固定版本號，確保穩定性與消除 Rolling Tag 警告)
-# ==========================================
-echo "3. 部署 PostgreSQL..."
+echo "5. 部署基礎設施..."
+echo "   - 部署 PostgreSQL (使用 Secret)..."
 helm upgrade --install postgresql bitnami/postgresql --version 18.5.14 -n infra -f helm-values/postgresql.yaml
 
-echo "4. 部署 Redis (with RediSearch)..."
+echo "   - 部署 Redis Stack (使用 Secret)..."
 kubectl apply -f manifests/redis-stack.yaml
 
-echo "5. 部署 ArgoCD..."
+echo "   - 部署 ArgoCD..."
 helm upgrade --install argocd argo/argo-cd --version 9.4.17 -n argocd -f helm-values/argocd.yaml -f "$TEMP_ARGOCD_VALUES"
 
-echo "6. 部署 PLG Stack (Loki + Promtail + Grafana)..."
+echo "   - 部署 PLG Stack (Loki + Promtail + Grafana)..."
 helm upgrade --install loki grafana/loki --version 6.55.0 -n observability -f helm-values/loki.yaml
 helm upgrade --install promtail grafana/promtail --version 6.17.1 -n observability -f helm-values/promtail.yaml
 helm upgrade --install grafana grafana/grafana --version 10.5.15 -n observability -f helm-values/grafana.yaml
 
-# 清理臨時檔案
-rm -f "$TEMP_ARGOCD_VALUES"
+echo "   - 部署 Prometheus (輕量版，監控開發者指標)..."
+helm upgrade --install prometheus prometheus-community/prometheus --version 25.27.0 -n observability --set server.persistentVolume.enabled=false --set alertmanager.enabled=false --set pushgateway.enabled=false
 
 # ==========================================
-# 自動更新本機 /etc/hosts 檔案
+# 6. 自動更新本機 /etc/hosts 檔案
 # ==========================================
-echo "7. 更新本機 /etc/hosts 網路設定 (需要 sudo 權限)..."
-
-# 在 macOS + Docker Driver 下，Ingress 必須透過 tunnel 導向 127.0.0.1
+echo "6. 更新本機 /etc/hosts 網路設定 (需要 sudo 權限)..."
 TARGET_IP="127.0.0.1"
-
-# 檢查是否已存在相關網域紀錄
 if grep -q "argocd.local" /etc/hosts; then
     echo "   - 發現現有紀錄，正在更新 IP 為 $TARGET_IP..."
     sudo sed -i '' -e "/argocd.local/s/^[0-9.]*/$TARGET_IP/" /etc/hosts
@@ -105,10 +141,14 @@ else
     echo "   - 新增網域紀錄指向 $TARGET_IP..."
     echo "$TARGET_IP argocd.local grafana.local" | sudo tee -a /etc/hosts > /dev/null
 fi
-echo "✅ /etc/hosts 更新完成！"
+
+# 清理臨時檔案
+rm -f "$TEMP_ARGOCD_VALUES"
 
 echo "✅ 所有基礎設施與網路設定已完成！"
 echo "👉 ArgoCD URL: http://argocd.local (帳號: admin, 密碼: ${ARGOCD_ADMIN_PASSWORD})"
 echo "👉 Grafana URL: http://grafana.local (帳號: admin, 密碼: admin)"
-echo "👉 觀察進度: kubectl get pods -A"
+echo "🔐 PostgreSQL 自動產生密碼: $PG_PASS"
+echo "🔐 Redis 自動產生密碼: $REDIS_PASS"
 echo "💡 若瀏覽器無法連線，請開啟新終端機執行: minikube tunnel"
+echo "💡 查看微服務流量拓撲，請輸入指令: linkerd viz dashboard"

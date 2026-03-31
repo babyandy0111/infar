@@ -6,11 +6,12 @@
 
 | 組件 | 服務內容 | 部署方式 | 特色 |
 | :--- | :--- | :--- | :--- |
-| **PostgreSQL** | 基礎關聯式資料庫 | Helm (Bitnami) | Standalone 模式，資源優化，固定版本 16.2.0 |
-| **Redis Stack** | 快取與搜尋引擎 | K8s Manifest | 內建 **RediSearch** 模組，支援高性能全文檢索 |
-| **ArgoCD** | GitOps 自動化部署 | Helm (Argo) | 預設管理員帳號: `admin`, 密碼: `admin123` |
-| **PLG Stack** | 日誌與監控系統 | Helm (Grafana) | 包含 Loki (日誌)、Promtail (收集)、Grafana (視覺化) |
+| **PostgreSQL** | 基礎關聯式資料庫 | Helm (Bitnami) | Standalone 模式，資源優化，密碼使用 K8s Native Secret 動態生成 |
+| **Redis Stack** | 快取與搜尋引擎 | K8s Manifest | 內建 RediSearch 模組，密碼使用 K8s Native Secret |
+| **ArgoCD** | GitOps 自動化部署 | Helm (Argo) | 預設管理員: `admin`, 密碼: `admin123` |
+| **PLG Stack** | 日誌與監控系統 | Helm (Grafana) | 包含 Loki, Promtail, Grafana 以及 Prometheus |
 | **Ingress** | 統一入口網關 | Nginx Ingress | 支援 `.local` 虛擬域名存取 |
+| **Linkerd** | 服務網格 (Service Mesh) | CLI 部署 | `infra` 空間已開啟自動注入，支援流量觀測與 mTLS |
 
 ---
 
@@ -76,10 +77,13 @@ server:
 k8s/
 └── infra/
     ├── helm-values/    # 各服務的 Helm 設定檔
-    ├── manifests/      # 原生 K8s 部署檔 (如 Redis Stack)
+    ├── manifests/      # 原生 K8s 部署檔
     ├── tests/          # 自動化驗證腳本
-    └── setup.sh        # 一鍵安裝與依賴檢查腳本
+    └── setup.sh        # 一鍵安裝腳本 (含 Linkerd 與 Secrets)
 ```
 
 ---
-**Next Step**: 第二階段將啟動 `go-zero` 微服務開發，並透過 ArgoCD 實現自動化部署。
+## 📝 未來擴展計畫 (Phase 2 & Beyond)
+- [ ] **Horizontal Pod Autoscaler (HPA)**：為後端微服務與基礎設施 (如 PostgreSQL Replicas) 加入基於 CPU/Memory 的自動擴縮容配置，模擬真實雙 11 流量尖峰的高可用性架構。
+- [ ] **go-zero 微服務開發**：啟動 `backend/` 下的微服務實作，結合 ArgoCD 實現 CI/CD。
+

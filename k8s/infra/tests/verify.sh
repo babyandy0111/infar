@@ -44,12 +44,16 @@ done
 echo ""
 echo "2. 執行深度功能檢查..."
 
+# 獲取動態密碼
+PG_PASS=$(kubectl get secret infra-secrets -n infra -o jsonpath="{.data.postgresql-password}" 2>/dev/null | base64 --decode)
+REDIS_PASS=$(kubectl get secret infra-secrets -n infra -o jsonpath="{.data.redis-password}" 2>/dev/null | base64 --decode)
+
 # 檢查 Redis RediSearch 模組
 printf "   - 驗證 Redis RediSearch 模組: "
 REDIS_POD=$(kubectl get pods -n infra -l app.kubernetes.io/name=redis -o jsonpath="{.items[0].metadata.name}" 2>/dev/null)
 if [ ! -z "$REDIS_POD" ]; then
-    # 嘗試在 Redis 中執行 MODULE LIST，並搜尋 search 或 ft 關鍵字
-    MODULES=$(kubectl exec -n infra "$REDIS_POD" -- redis-cli -a redispassword MODULE LIST 2>/dev/null)
+    # 使用動態獲取的 REDIS_PASS 登入
+    MODULES=$(kubectl exec -n infra "$REDIS_POD" -- redis-cli -a "$REDIS_PASS" MODULE LIST 2>/dev/null)
     if echo "$MODULES" | grep -qiE "search|ft"; then
         echo "✅ PASS (RediSearch 已載入)"
     else
@@ -64,7 +68,8 @@ fi
 printf "   - 驗證 PostgreSQL 連線:       "
 POSTGRES_POD=$(kubectl get pods -n infra -l app.kubernetes.io/name=postgresql -o jsonpath="{.items[0].metadata.name}" 2>/dev/null)
 if [ ! -z "$POSTGRES_POD" ]; then
-    if kubectl exec -n infra "$POSTGRES_POD" -- pg_isready -U admin &> /dev/null; then
+    # 使用動態獲取的 PG_PASS 登入
+    if kubectl exec -n infra "$POSTGRES_POD" -- env PGPASSWORD="$PG_PASS" pg_isready -U admin &> /dev/null; then
         echo "✅ PASS (資料庫已就緒)"
     else
         echo "❌ FAIL (資料庫無回應)"
@@ -79,11 +84,12 @@ fi
 echo ""
 echo "3. Ingress 網路存取測試:"
 
-MINIKUBE_IP=$(minikube ip 2>/dev/null || echo "127.0.0.1")
+# macOS + Docker 版的 Minikube 必須透過 127.0.0.1 加上 Tunnel 才能存取 Ingress
+TARGET_IP="127.0.0.1"
 
 # 測試 ArgoCD Ingress
 printf "   - 測試 argocd.local:          "
-HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --resolve "argocd.local:80:$MINIKUBE_IP" http://argocd.local)
+HTTP_STATUS=$(curl -s --max-time 5 -o /dev/null -w "%{http_code}" --resolve "argocd.local:80:$TARGET_IP" http://argocd.local)
 if [ "$HTTP_STATUS" == "200" ] || [ "$HTTP_STATUS" == "307" ]; then
     echo "✅ PASS (狀態碼: $HTTP_STATUS)"
 else
@@ -92,7 +98,7 @@ fi
 
 # 測試 Grafana Ingress
 printf "   - 測試 grafana.local:         "
-HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" --resolve "grafana.local:80:$MINIKUBE_IP" http://grafana.local)
+HTTP_STATUS=$(curl -s --max-time 5 -o /dev/null -w "%{http_code}" --resolve "grafana.local:80:$TARGET_IP" http://grafana.local)
 if [ "$HTTP_STATUS" == "200" ] || [ "$HTTP_STATUS" == "302" ]; then
     echo "✅ PASS (狀態碼: $HTTP_STATUS)"
 else
@@ -107,4 +113,4 @@ echo "-------------------------------------------------------"
 echo "💡 提示 1: ArgoCD 登入帳號為 admin, 密碼為 admin123"
 echo "💡 提示 2: Grafana 登入帳號為 admin, 密碼為 admin"
 echo "💡 提示 3: 請確保您已將以下內容加入本機的 /etc/hosts :"
-echo "          $MINIKUBE_IP argocd.local grafana.local"
+echo "          $TARGET_IP argocd.local grafana.local"
