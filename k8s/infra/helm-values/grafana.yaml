@@ -4,13 +4,13 @@ service:
 persistence:
   enabled: true
   size: 2Gi
-# 啟用 Ingress
+
 ingress:
   enabled: true
   hosts:
     - grafana.local
   ingressClassName: nginx
-# 預設連結 Loki
+
 datasources:
   datasources.yaml:
     apiVersion: 1
@@ -20,3 +20,25 @@ datasources:
         access: proxy
         url: http://loki-gateway.observability.svc.cluster.local
         isDefault: true
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus-server.observability.svc.cluster.local
+
+# 最穩定的官方掛載法：定義一個叫 Linkerd 的 Provider
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: 'Linkerd'
+        orgId: 1
+        folder: '' # 放在根目錄最安全
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/linkerd
+
+# 告訴 Helm 把這個我們裝好的 ConfigMap 掛載成一個實體的資料夾
+dashboardsConfigMaps:
+  linkerd: "linkerd-grafana-dashboards"

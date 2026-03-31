@@ -27,10 +27,6 @@ if ! command -v linkerd &> /dev/null; then
     echo "⚠️ 找不到 linkerd CLI，開始自動安裝..."
     curl --proto '=https' --tlsv1.2 -sSfL https://run.linkerd.io/install | sh
     export PATH=$PATH:$HOME/.linkerd2/bin
-    if ! command -v linkerd &> /dev/null; then
-        echo "❌ 安裝 linkerd 失敗，請手動檢查環境。"
-        exit 1
-    fi
     echo "✅ linkerd CLI 安裝完成。"
 else
     echo "✅ linkerd CLI 已安裝。"
@@ -70,7 +66,6 @@ if ! kubectl get secret infra-secrets -n infra &> /dev/null; then
         --from-literal=postgresql-password="$PG_PASS" \
         --from-literal=redis-password="$REDIS_PASS"
 else
-    echo "   - infra-secrets 已存在，保留現有密碼。"
     PG_PASS=$(kubectl get secret infra-secrets -n infra -o jsonpath="{.data.postgresql-password}" | base64 --decode)
     REDIS_PASS=$(kubectl get secret infra-secrets -n infra -o jsonpath="{.data.redis-password}" | base64 --decode)
 fi
@@ -92,59 +87,64 @@ if ! kubectl get namespace linkerd &> /dev/null; then
     echo "   - 安裝 Linkerd CRDs 與 Control Plane (請耐心等候)..."
     linkerd install --crds | kubectl apply -f -
     linkerd install | kubectl apply -f -
-    # 等待控制平面就緒
+    linkerd viz install | kubectl apply -f -
     linkerd check --wait 5m
 else
     echo "   - Linkerd 已安裝。"
 fi
 
 # ==========================================
-# 4. 加入 Helm Repositories
+# 4. 準備 Grafana Dashboards (Linkerd 官方)
 # ==========================================
-echo "4. 加入 Helm Repositories..."
-helm repo add bitnami https://charts.bitnami.com/bitnami
-helm repo add argo https://argoproj.github.io/argo-helm
-helm repo add grafana https://grafana.github.io/helm-charts
-helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
-helm repo update > /dev/null
+echo "4. 下載並封裝 Linkerd 儀表板..."
+TEMP_DB_DIR=$(mktemp -d)
+# 這些是 Linkerd 官方 GitHub 上最核心的流量監控看板
+DASHBOARDS=("top-line" "namespace" "deployment" "pod" "service")
+for db in "${DASHBOARDS[@]}"; do
+  curl -sSL -o "${TEMP_DB_DIR}/${db}.json" "https://raw.githubusercontent.com/linkerd/linkerd2/main/grafana/dashboards/${db}.json"
+  
+  # 這是這一步的關鍵：Linkerd 官方 JSON 裡的 datasource 名稱是 "${datasource}"，我們必須把它改成 "Prometheus" (這是我們在 grafana.yaml 定義的名稱)
+  # 我們用 sed 進行全檔案字串替換，這樣 Grafana 就不會報錯說找不到資料源
+  sed -i '' 's/${datasource}/Prometheus/g' "${TEMP_DB_DIR}/${db}.json"
+done
+
+# 如果舊的 configmap 存在，先刪除，確保資料是最新的
+kubectl delete configmap linkerd-grafana-dashboards -n observability &> /dev/null || true
+
+# 重新封裝
+kubectl create configmap linkerd-grafana-dashboards -n observability --from-file="${TEMP_DB_DIR}/" --dry-run=client -o yaml | kubectl apply -f -
+rm -rf "$TEMP_DB_DIR"
 
 # ==========================================
-# 5. 部署服務 (固定版本號，確保穩定性)
+# 5. 部署服務
 # ==========================================
 echo "5. 部署基礎設施..."
-echo "   - 部署 PostgreSQL (使用 Secret)..."
+helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null
+helm repo add argo https://argoproj.github.io/argo-helm > /dev/null
+helm repo add grafana https://grafana.github.io/helm-charts > /dev/null
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts > /dev/null
+helm repo update > /dev/null
+
 helm upgrade --install postgresql bitnami/postgresql --version 18.5.14 -n infra -f helm-values/postgresql.yaml
-
-echo "   - 部署 Redis Stack (使用 Secret)..."
 kubectl apply -f manifests/redis-stack.yaml
-
-echo "   - 部署 ArgoCD..."
 helm upgrade --install argocd argo/argo-cd --version 9.4.17 -n argocd -f helm-values/argocd.yaml -f "$TEMP_ARGOCD_VALUES"
-
-echo "   - 部署 PLG Stack (Loki + Promtail + Grafana)..."
 helm upgrade --install loki grafana/loki --version 6.55.0 -n observability -f helm-values/loki.yaml
 helm upgrade --install promtail grafana/promtail --version 6.17.1 -n observability -f helm-values/promtail.yaml
 helm upgrade --install grafana grafana/grafana --version 10.5.15 -n observability -f helm-values/grafana.yaml
-
-echo "   - 部署 Prometheus (輕量版，監控開發者指標)..."
 helm upgrade --install prometheus prometheus-community/prometheus --version 25.27.0 -n observability --set server.persistentVolume.enabled=false --set alertmanager.enabled=false --set pushgateway.enabled=false
 
 # ==========================================
-# 6. 自動更新本機 /etc/hosts 檔案
+# 6. 自動更新本機 /etc/hosts
 # ==========================================
-echo "6. 更新本機 /etc/hosts 網路設定 (需要 sudo 權限)..."
+echo "6. 更新本機 /etc/hosts (需要 sudo 權限)..."
 TARGET_IP="127.0.0.1"
 if grep -q "argocd.local" /etc/hosts; then
-    echo "   - 發現現有紀錄，正在更新 IP 為 $TARGET_IP..."
     sudo sed -i '' -e "/argocd.local/s/^[0-9.]*/$TARGET_IP/" /etc/hosts
 else
-    echo "   - 新增網域紀錄指向 $TARGET_IP..."
     echo "$TARGET_IP argocd.local grafana.local" | sudo tee -a /etc/hosts > /dev/null
 fi
 
-# 清理臨時檔案
 rm -f "$TEMP_ARGOCD_VALUES"
-
 echo "✅ 所有基礎設施與網路設定已完成！"
 echo "👉 ArgoCD URL: http://argocd.local (帳號: admin, 密碼: ${ARGOCD_ADMIN_PASSWORD})"
 echo "👉 Grafana URL: http://grafana.local (帳號: admin, 密碼: admin)"
