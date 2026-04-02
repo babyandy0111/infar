@@ -13,7 +13,7 @@ SERVICES=(
     "kafka:infra"
     "flink-jobmanager:infra"
     "flink-taskmanager:infra"
-    "argocd-server:argocd"
+    "argocd.*-server:argocd"
     "loki:observability"
     "grafana:observability"
 )
@@ -26,16 +26,17 @@ echo "1. 檢查 Pods 是否已準備就緒 (Ready)..."
 check_ready() {
     local keyword=$1
     local ns=$2
-    printf "   - 檢查 %-15s 在 %-13s namespace: " "$keyword" "$ns"
+    # 格式化輸出名稱 (去掉正則表達式符號)
+    local display_name=$(echo "$keyword" | sed 's/\.\*//g' | sed 's/\\//g')
+    printf "   - 檢查 %-15s 在 %-13s namespace: " "$display_name" "$ns"
     
-    # 使用模糊匹配尋找 Pod 名稱包含關鍵字且狀態為 Running/Ready 的 Pod
-    # 這樣可以避開 cdk8s 生成的隨機 Hash 名稱問題
-    POD_STATUS=$(kubectl get pods -n "$ns" --no-headers 2>/dev/null | grep "$keyword" | grep -v "test" | awk '{print $3}' | head -n 1)
+    # 使用 grep -E 模糊匹配，並排除不需要的 Pod
+    POD_LINE=$(kubectl get pods -n "$ns" --no-headers 2>/dev/null | grep -E "$keyword" | grep -v "test" | grep -v "dex" | grep -v "repo" | head -n 1)
+    
+    POD_STATUS=$(echo "$POD_LINE" | awk '{print $3}')
     
     if [ "$POD_STATUS" == "Running" ]; then
-        # 進一步檢查 Ready 欄位 (例如 1/1 或 2/2)
-        READY_STATUS=$(kubectl get pods -n "$ns" --no-headers 2>/dev/null | grep "$keyword" | grep -v "test" | awk '{print $2}' | head -n 1)
-        # 只要第一個數字等於第二個數字 (1/1, 2/2) 就代表 Ready
+        READY_STATUS=$(echo "$POD_LINE" | awk '{print $2}')
         CURRENT=$(echo $READY_STATUS | cut -d/ -f1)
         TOTAL=$(echo $READY_STATUS | cut -d/ -f2)
         if [ "$CURRENT" -eq "$TOTAL" ] && [ "$TOTAL" -gt 0 ]; then
@@ -60,11 +61,9 @@ done
 echo ""
 echo "2. 執行深度功能檢查..."
 
-# 獲取動態密碼
 PG_PASS=$(kubectl get secret infra-secrets -n infra -o jsonpath="{.data.postgresql-password}" 2>/dev/null | base64 --decode)
 REDIS_PASS=$(kubectl get secret infra-secrets -n infra -o jsonpath="{.data.redis-password}" 2>/dev/null | base64 --decode)
 
-# 檢查 Redis RediSearch 模組
 printf "   - 驗證 Redis RediSearch 模組: "
 REDIS_POD=$(kubectl get pods -n infra --no-headers | grep "redis" | grep "Running" | awk '{print $1}' | head -n 1)
 if [ ! -z "$REDIS_POD" ]; then
@@ -78,7 +77,6 @@ else
     echo "❌ FAIL (找不到 Redis Pod)"
 fi
 
-# 檢查 PostgreSQL
 printf "   - 驗證 PostgreSQL 連線:       "
 POSTGRES_POD=$(kubectl get pods -n infra --no-headers | grep "postgres" | grep "Running" | awk '{print $1}' | head -n 1)
 if [ ! -z "$POSTGRES_POD" ]; then
@@ -91,7 +89,6 @@ else
     echo "❌ FAIL (找不到 PostgreSQL Pod)"
 fi
 
-# 檢查 Kafka Broker
 printf "   - 驗證 Kafka Broker 運作:     "
 KAFKA_POD=$(kubectl get pods -n infra --no-headers | grep "kafka" | grep "Running" | awk '{print $1}' | head -n 1)
 if [ ! -z "$KAFKA_POD" ]; then

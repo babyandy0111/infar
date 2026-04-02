@@ -406,7 +406,7 @@ spec:
     app: zookeeper
 ---
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   labels:
     project: infar
@@ -417,6 +417,7 @@ spec:
   selector:
     matchLabels:
       app: zookeeper
+  serviceName: zookeeper
   template:
     metadata:
       labels:
@@ -430,6 +431,18 @@ spec:
           name: zookeeper
           ports:
             - containerPort: 2181
+          volumeMounts:
+            - mountPath: /data
+              name: data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
 ---
 apiVersion: v1
 kind: Service
@@ -449,11 +462,6 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  annotations:
-    config.linkerd.io/opaque-ports: 9092,2181
-    prometheus.io/path: /metrics
-    prometheus.io/port: "4191"
-    prometheus.io/scrape: "true"
   labels:
     project: infar
   name: kafka
@@ -485,6 +493,16 @@ spec:
           name: kafka
           ports:
             - containerPort: 9092
+          volumeMounts:
+            - mountPath: /kafka
+              name: data
+      initContainers:
+        - command:
+            - sh
+            - -c
+            - rm -rf /kafka/meta.properties && echo 'Cleaned old metadata' || true
+          image: busybox:latest
+          name: fix-cluster-id
           volumeMounts:
             - mountPath: /kafka
               name: data
@@ -1438,6 +1456,7 @@ spec:
     metadata:
       annotations:
         cluster-autoscaler.kubernetes.io/safe-to-evict: "true"
+        linkerd.io/inject: disabled
       labels:
         app.kubernetes.io/component: metrics
         app.kubernetes.io/instance: infar-infra-prometheus-c8f1e7ac
@@ -2610,35 +2629,6 @@ spec:
             storage: 10Gi
 ---
 apiVersion: v1
-kind: Pod
-metadata:
-  annotations:
-    helm.sh/hook: test
-  labels:
-    app.kubernetes.io/component: helm-test
-    app.kubernetes.io/instance: infar-infra-loki-c8f1e7ac
-    app.kubernetes.io/name: loki
-    app.kubernetes.io/version: 3.6.7
-    helm.sh/chart: loki-6.55.0
-    project: infar
-  name: loki-helm-test
-  namespace: observability
-spec:
-  containers:
-    - args:
-        - -test.v
-      env:
-        - name: CANARY_SERVICE_ADDRESS
-          value: http://loki-canary.observability.svc.cluster.local:3500/metrics
-        - name: CANARY_PROMETHEUS_ADDRESS
-          value: ""
-        - name: CANARY_TEST_TIMEOUT
-          value: 1m
-      image: docker.io/grafana/loki-helm-test:latest
-      name: loki-helm-test
-  restartPolicy: Never
----
-apiVersion: v1
 kind: ServiceAccount
 metadata:
   labels:
@@ -3596,8 +3586,8 @@ metadata:
   name: argocd-secret
   namespace: argocd
 data:
-  admin.password: JDJhJDEwJHBPblBpdUdOYXR6bjN1ZmJ3U1FKT09HLjBIeGhtSE5zYTk4RTRCd3hTekFnMEVHSXJrNlJD
-  admin.passwordMtime: MjAyNi0wNC0wMlQxNDo0NDo1Mlo=
+  admin.password: JDJhJDEwJDF0NmRvYkhKY1p1Znp2LnhtWGtvdi43YnFjZ2JWYTVTY21SQmJpdTRjLkUwYVViYTlyN1Rx
+  admin.passwordMtime: MjAyNi0wNC0wMlQxNToyOTowMlo=
 type: Opaque
 ---
 apiVersion: v1

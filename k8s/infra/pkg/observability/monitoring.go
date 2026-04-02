@@ -13,7 +13,12 @@ func CreateMonitoring(chart cdk8s.Chart) {
 		Version:   jsii.String("25.27.0"),
 		Namespace: jsii.String("observability"),
 		Values: &map[string]interface{}{
-			"server":       map[string]interface{}{"persistentVolume": map[string]interface{}{"enabled": false}},
+			"server": map[string]interface{}{"persistentVolume": map[string]interface{}{"enabled": false}},
+			"prometheus-node-exporter": map[string]interface{}{
+				"podAnnotations": map[string]interface{}{
+					"linkerd.io/inject": "disabled",
+				},
+			},
 			"alertmanager": map[string]interface{}{"enabled": false},
 			"pushgateway":  map[string]interface{}{"enabled": false},
 		},
@@ -25,8 +30,8 @@ func CreateMonitoring(chart cdk8s.Chart) {
 		Version:   jsii.String("6.55.0"),
 		Namespace: jsii.String("observability"),
 		Values: &map[string]interface{}{
-			"loki": map[string]interface{}{
-				"auth_enabled": false,
+			"test": map[string]interface{}{"enabled": false},
+			"loki": map[string]interface{}{"auth_enabled": false,
 				"commonConfig": map[string]interface{}{"replication_factor": 1},
 				"storage":      map[string]interface{}{"type": "filesystem"},
 				"schemaConfig": map[string]interface{}{
