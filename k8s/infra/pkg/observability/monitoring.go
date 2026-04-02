@@ -9,9 +9,10 @@ import (
 func CreateMonitoring(chart cdk8s.Chart) {
 	// 1. Prometheus
 	cdk8s.NewHelm(chart, jsii.String("prometheus"), &cdk8s.HelmProps{
-		Chart:     jsii.String("prometheus-community/prometheus"),
-		Version:   jsii.String("25.27.0"),
-		Namespace: jsii.String("observability"),
+		Chart:       jsii.String("prometheus-community/prometheus"),
+		Version:     jsii.String("25.27.0"),
+		Namespace:   jsii.String("observability"),
+		ReleaseName: jsii.String("prometheus"),
 		Values: &map[string]interface{}{
 			"fullnameOverride": "prometheus",
 			"nameOverride":     "prometheus",
@@ -24,15 +25,22 @@ func CreateMonitoring(chart cdk8s.Chart) {
 				"podAnnotations":   map[string]interface{}{"linkerd.io/inject": "disabled"},
 			},
 			"alertmanager": map[string]interface{}{"enabled": false},
-			"pushgateway":  map[string]interface{}{"enabled": false},
+			"kube-state-metrics": map[string]interface{}{
+				"fullnameOverride": "kube-state-metrics",
+			},
+			"pushgateway": map[string]interface{}{
+				"enabled":          true,
+				"fullnameOverride": "prometheus-pushgateway",
+			},
 		},
 	})
 
 	// 2. Loki
 	cdk8s.NewHelm(chart, jsii.String("loki"), &cdk8s.HelmProps{
-		Chart:     jsii.String("grafana/loki"),
-		Version:   jsii.String("6.55.0"),
-		Namespace: jsii.String("observability"),
+		Chart:       jsii.String("grafana/loki"),
+		Version:     jsii.String("6.55.0"),
+		Namespace:   jsii.String("observability"),
+		ReleaseName: jsii.String("loki"),
 		Values: &map[string]interface{}{
 			"fullnameOverride": "loki",
 			"nameOverride":     "loki",
@@ -61,9 +69,10 @@ func CreateMonitoring(chart cdk8s.Chart) {
 
 	// 3. Promtail
 	cdk8s.NewHelm(chart, jsii.String("promtail"), &cdk8s.HelmProps{
-		Chart:     jsii.String("grafana/promtail"),
-		Version:   jsii.String("6.17.1"),
-		Namespace: jsii.String("observability"),
+		Chart:       jsii.String("grafana/promtail"),
+		Version:     jsii.String("6.17.1"),
+		Namespace:   jsii.String("observability"),
+		ReleaseName: jsii.String("promtail"),
 		Values: &map[string]interface{}{
 			"fullnameOverride": "promtail",
 			"nameOverride":     "promtail",
@@ -77,9 +86,10 @@ func CreateMonitoring(chart cdk8s.Chart) {
 
 	// 4. Grafana
 	cdk8s.NewHelm(chart, jsii.String("grafana"), &cdk8s.HelmProps{
-		Chart:     jsii.String("grafana/grafana"),
-		Version:   jsii.String("10.5.15"),
-		Namespace: jsii.String("observability"),
+		Chart:       jsii.String("grafana/grafana"),
+		Version:     jsii.String("10.5.15"),
+		Namespace:   jsii.String("observability"),
+		ReleaseName: jsii.String("grafana"),
 		Values: &map[string]interface{}{
 			"fullnameOverride":         "grafana",
 			"nameOverride":             "grafana",

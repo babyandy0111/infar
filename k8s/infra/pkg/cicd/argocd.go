@@ -17,9 +17,10 @@ func CreateArgoCD(chart cdk8s.Chart, adminPassword string) {
 	adminHash := string(hash)
 
 	cdk8s.NewHelm(chart, jsii.String("argocd"), &cdk8s.HelmProps{
-		Chart:     jsii.String("argo/argo-cd"),
-		Version:   jsii.String("9.4.17"),
-		Namespace: jsii.String("argocd"),
+		Chart:       jsii.String("argo/argo-cd"),
+		Version:     jsii.String("9.4.17"),
+		Namespace:   jsii.String("argocd"),
+		ReleaseName: jsii.String("argocd"),
 		Values: &map[string]interface{}{
 			"fullnameOverride": "argocd",
 			"nameOverride":     "argocd",

@@ -7,9 +7,10 @@ import (
 
 func CreatePostgreSQL(chart cdk8s.Chart) {
 	cdk8s.NewHelm(chart, jsii.String("postgres"), &cdk8s.HelmProps{
-		Chart:     jsii.String("bitnami/postgresql"),
-		Version:   jsii.String("18.5.14"),
-		Namespace: jsii.String("infra"),
+		Chart:       jsii.String("bitnami/postgresql"),
+		Version:     jsii.String("18.5.14"),
+		Namespace:   jsii.String("infra"),
+		ReleaseName: jsii.String("postgres"),
 		Values: &map[string]interface{}{
 			"fullnameOverride": "postgres",
 			"nameOverride":     "postgres",
