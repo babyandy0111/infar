@@ -1,0 +1,30 @@
+# Flink Image
+image:
+  tag: "1.18.1-debian-12-r0"
+
+# 部署 JobManager (控制中心)
+jobmanager:
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "512Mi"
+    limits:
+      memory: "1Gi"
+
+# 部署 TaskManager (運算節點，只給 1 個)
+taskmanager:
+  replicaCount: 1
+  resources:
+    requests:
+      memory: "1Gi"
+    limits:
+      memory: "2Gi"
+
+# 啟用 Web UI Ingress (讓您可以透過 flink.local 觀看計算任務)
+ingress:
+  enabled: true
+  hostname: flink.local
+  pathType: Prefix
+  ingressClassName: nginx
+  annotations:
+    kubernetes.io/ingress.class: nginx

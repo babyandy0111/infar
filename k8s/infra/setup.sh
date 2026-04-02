@@ -103,26 +103,10 @@ else
 fi
 
 # ==========================================
-# 4. 準備 Grafana Dashboards (Linkerd 官方)
+# 4. 準備 Grafana Dashboards (Infar 專屬)
 # ==========================================
-echo "4. 下載並封裝 Linkerd 儀表板..."
-TEMP_DB_DIR=$(mktemp -d)
-# 這些是 Linkerd 官方 GitHub 上最核心的流量監控看板
-DASHBOARDS=("top-line" "namespace" "deployment" "pod" "service")
-for db in "${DASHBOARDS[@]}"; do
-  curl -sSL -o "${TEMP_DB_DIR}/${db}.json" "https://raw.githubusercontent.com/linkerd/linkerd2/main/grafana/dashboards/${db}.json"
-  
-  # 這是這一步的關鍵：Linkerd 官方 JSON 裡的 datasource 名稱是 "${datasource}"，我們必須把它改成 "Prometheus" (這是我們在 grafana.yaml 定義的名稱)
-  # 我們用 sed 進行全檔案字串替換，這樣 Grafana 就不會報錯說找不到資料源
-  sed -i '' 's/${datasource}/Prometheus/g' "${TEMP_DB_DIR}/${db}.json"
-done
-
-# 如果舊的 configmap 存在，先刪除，確保資料是最新的
-kubectl delete configmap linkerd-grafana-dashboards -n observability &> /dev/null || true
-
-# 重新封裝
-kubectl create configmap linkerd-grafana-dashboards -n observability --from-file="${TEMP_DB_DIR}/" --dry-run=client -o yaml | kubectl apply -f -
-rm -rf "$TEMP_DB_DIR"
+echo "4. 套用 Infar 專屬儀表板設定..."
+kubectl apply -f manifests/infar-dashboard.yaml
 
 # ==========================================
 # 5. 部署服務
@@ -136,6 +120,13 @@ helm repo update > /dev/null
 
 helm upgrade --install postgresql bitnami/postgresql --version 18.5.14 -n infra -f helm-values/postgresql.yaml
 kubectl apply -f manifests/redis-stack.yaml
+
+echo "   - 部署 Kafka (Event Streaming, KRaft 模式)..."
+helm upgrade --install kafka bitnami/kafka --version 31.4.1 -n infra -f helm-values/kafka.yaml
+
+echo "   - 部署 Flink (Stream Processing)..."
+helm upgrade --install flink bitnami/flink --version 1.4.2 -n infra -f helm-values/flink.yaml
+
 helm upgrade --install argocd argo/argo-cd --version 9.4.17 -n argocd -f helm-values/argocd.yaml -f "$TEMP_ARGOCD_VALUES"
 helm upgrade --install loki grafana/loki --version 6.55.0 -n observability -f helm-values/loki.yaml
 helm upgrade --install promtail grafana/promtail --version 6.17.1 -n observability -f helm-values/promtail.yaml
@@ -149,8 +140,11 @@ echo "6. 更新本機 /etc/hosts (需要 sudo 權限)..."
 TARGET_IP="127.0.0.1"
 if grep -q "argocd.local" /etc/hosts; then
     sudo sed -i '' -e "/argocd.local/s/^[0-9.]*/$TARGET_IP/" /etc/hosts
+    if ! grep -q "flink.local" /etc/hosts; then
+        sudo sed -i '' -e "s/argocd.local/argocd.local flink.local/" /etc/hosts
+    fi
 else
-    echo "$TARGET_IP argocd.local grafana.local" | sudo tee -a /etc/hosts > /dev/null
+    echo "$TARGET_IP argocd.local grafana.local flink.local" | sudo tee -a /etc/hosts > /dev/null
 fi
 
 rm -f "$TEMP_ARGOCD_VALUES"

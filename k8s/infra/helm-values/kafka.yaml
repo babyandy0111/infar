@@ -1,0 +1,34 @@
+# 啟用 KRaft 模式，拋棄 ZooKeeper，大幅節省記憶體
+kraft:
+  enabled: true
+
+# 關閉 ZooKeeper
+zookeeper:
+  enabled: false
+
+# 單節點模式適合本機開發
+replicaCount: 1
+
+# 資源限制 (對 M3 Pro 溫柔一點)
+resources:
+  limits:
+    memory: 1Gi
+  requests:
+    memory: 512Mi
+
+# 持久化設定
+persistence:
+  enabled: true
+  size: 2Gi
+
+# 允許本機透過 NodePort 存取 Kafka (方便 Go 程式在 K8s 外測試)
+externalAccess:
+  enabled: true
+  controller:
+    forceNodePort: true
+  autoDiscovery:
+    enabled: true
+  broker:
+    protocol: PLAINTEXT
+    service:
+      type: NodePort

@@ -1,0 +1,63 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: infar-grafana-dashboard
+  namespace: observability
+  labels:
+    grafana_dashboard: "1"
+data:
+  infar-overview.json: |
+    {
+      "title": "Infar - Microservices Overview",
+      "timezone": "browser",
+      "refresh": "5s",
+      "schemaVersion": 30,
+      "panels": [
+        {
+          "type": "stat",
+          "title": "Global Success Rate (infra)",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "targets": [
+            {
+              "expr": "sum(rate(response_total{namespace=\"infra\", classification=\"success\"}[1m])) / sum(rate(response_total{namespace=\"infra\"}[1m])) * 100",
+              "legendFormat": "Success Rate",
+              "refId": "A",
+              "datasource": {"type": "prometheus", "uid": "Linkerd-Prometheus"}
+            }
+          ],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "justifyMode": "auto",
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false, "fields": "" },
+            "textMode": "auto"
+          }
+        },
+        {
+          "type": "timeseries",
+          "title": "Request Volume by Pod",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "targets": [
+            {
+              "expr": "sum by (pod) (rate(response_total{namespace=\"infra\"}[1m]))",
+              "legendFormat": "{{pod}}",
+              "refId": "A",
+              "datasource": {"type": "prometheus", "uid": "Linkerd-Prometheus"}
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "TCP Connections by Pod",
+          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+          "targets": [
+            {
+              "expr": "sum by (pod) (rate(tcp_open_total{namespace=\"infra\"}[1m]))",
+              "legendFormat": "{{pod}}",
+              "refId": "A",
+              "datasource": {"type": "prometheus", "uid": "Linkerd-Prometheus"}
+            }
+          ]
+        }
+      ]
+    }

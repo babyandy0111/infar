@@ -24,25 +24,22 @@ datasources:
         type: prometheus
         access: proxy
         url: http://prometheus-server.observability.svc.cluster.local
-      # 對接 Linkerd 的數據中心
       - name: Linkerd-Prometheus
         type: prometheus
         access: proxy
         url: http://prometheus.linkerd-viz.svc.cluster.local:9090
 
-# 最穩定的官方掛載法
+# 核心修正：告訴 Grafana 只讀取 Infar 專屬的資料夾
 dashboardProviders:
   dashboardproviders.yaml:
     apiVersion: 1
     providers:
-      - name: 'Linkerd'
+      - name: 'Infar'
         orgId: 1
-        folder: ''
+        folder: 'Infar Custom'
         type: file
-        disableDeletion: false
-        editable: true
         options:
-          path: /var/lib/grafana/dashboards/linkerd
+          path: /var/lib/grafana/dashboards/infar
 
 dashboardsConfigMaps:
-  linkerd: "linkerd-grafana-dashboards"
+  infar: "infar-grafana-dashboard"
