@@ -121,8 +121,12 @@ helm repo update > /dev/null
 helm upgrade --install postgresql bitnami/postgresql --version 18.5.14 -n infra -f helm-values/postgresql.yaml
 kubectl apply -f manifests/redis-stack.yaml
 
-echo "   - 部署 Kafka (原生開發用版本，保證 100% 成功)..."
+echo "   - 部署 Kafka (原生開發用版本)..."
 kubectl apply -f manifests/kafka-dev.yaml
+
+echo "   - 部署 Flink (原生開發用版本)..."
+kubectl apply -f manifests/flink-dev.yaml
+kubectl apply -f manifests/flink-ingress.yaml
 
 helm upgrade --install argocd argo/argo-cd --version 9.4.17 -n argocd -f helm-values/argocd.yaml -f "$TEMP_ARGOCD_VALUES"
 helm upgrade --install loki grafana/loki --version 6.55.0 -n observability -f helm-values/loki.yaml

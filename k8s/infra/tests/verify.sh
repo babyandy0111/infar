@@ -9,6 +9,8 @@ echo "🔍 開始驗證基礎設施狀態..."
 SERVICES=(
     "postgresql:infra"
     "redis:infra"
+    "zookeeper:infra"
+    "kafka:infra"
     "argocd-server:argocd"
     "loki:observability"
     "grafana:observability"
@@ -24,8 +26,9 @@ check_ready() {
     local ns=$2
     printf "   - 檢查 %-15s 在 %-13s namespace: " "$label" "$ns"
     
-    # 使用 kubectl wait 確保資源 Ready
-    if kubectl wait --for=condition=Ready pod -l "app.kubernetes.io/name=$label" -n "$ns" --timeout=30s &> /dev/null; then
+    # 嘗試兩種常見的 K8s 標籤命名慣例
+    if kubectl wait --for=condition=Ready pod -l "app.kubernetes.io/name=$label" -n "$ns" --timeout=15s &> /dev/null || \
+       kubectl wait --for=condition=Ready pod -l "app=$label" -n "$ns" --timeout=15s &> /dev/null; then
         echo "✅ PASS"
     else
         echo "⏳ 仍在初始化或超時"
@@ -69,13 +72,28 @@ printf "   - 驗證 PostgreSQL 連線:       "
 POSTGRES_POD=$(kubectl get pods -n infra -l app.kubernetes.io/name=postgresql -o jsonpath="{.items[0].metadata.name}" 2>/dev/null)
 if [ ! -z "$POSTGRES_POD" ]; then
     # 使用動態獲取的 PG_PASS 登入
-    if kubectl exec -n infra "$POSTGRES_POD" -- env PGPASSWORD="$PG_PASS" pg_isready -U admin &> /dev/null; then
+    if kubectl exec -n infra "$POSTGRES_POD" -c postgresql -- env PGPASSWORD="$PG_PASS" pg_isready -U admin &> /dev/null; then
         echo "✅ PASS (資料庫已就緒)"
     else
         echo "❌ FAIL (資料庫無回應)"
     fi
 else
     echo "❌ FAIL (找不到 PostgreSQL Pod)"
+fi
+
+# 檢查 Kafka Broker
+printf "   - 驗證 Kafka Broker 運作:     "
+# 我們手刻的 YAML 標籤是 app=kafka
+KAFKA_POD=$(kubectl get pods -n infra -l app=kafka -o jsonpath="{.items[0].metadata.name}" 2>/dev/null)
+if [ ! -z "$KAFKA_POD" ]; then
+    # 使用 kafka-topics.sh 來測試是否能跟 Kafka Broker 通訊
+    if kubectl exec -n infra "$KAFKA_POD" -c kafka -- /opt/kafka/bin/kafka-topics.sh --list --bootstrap-server localhost:9092 &> /dev/null; then
+        echo "✅ PASS (Broker 連線正常)"
+    else
+        echo "❌ FAIL (Broker 拒絕連線或未啟動)"
+    fi
+else
+    echo "❌ FAIL (找不到 Kafka Pod)"
 fi
 
 # ==========================================
