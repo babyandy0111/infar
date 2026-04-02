@@ -6,15 +6,18 @@
 
 目前 K8s 叢集內已部署以下核心模組：
 
-*   **資料儲存層 (Data Layer)**:
-    *   `PostgreSQL` (關聯式資料庫)
+*   **資料儲存與快取層 (Data & Cache)**:
+    *   `PostgreSQL` (關聯式資料庫，版本 16.2)
     *   `Redis Stack` (具備 RediSearch 全文檢索能力)
+*   **事件驅動與大數據層 (Event & Streaming)**:
+    *   `Kafka & ZooKeeper` (高吞吐量訊息佇列，單機開發版)
+    *   `Apache Flink` (實時串流運算引擎)
 *   **持續交付層 (CI/CD)**:
     *   `ArgoCD` (實現 GitOps 自動化部署與狀態同步)
 *   **全方位可觀測性 (Observability)**:
     *   `Linkerd` (Service Mesh，提供流量觀測、mTLS 零信任加密)
     *   `Prometheus & Promtail` (系統指標與容器日誌收集)
-    *   `Loki & Grafana` (日誌聚合與中央視覺化儀表板，已內建 Linkerd 流量監控面板)
+    *   `Loki & Grafana` (日誌聚合與中央視覺化，內建 **Infar 專屬微服務戰情室**)
 *   **網路入口 (Gateway)**:
     *   `Nginx Ingress Controller` (本機開發用的 L7 負載平衡器)
 
@@ -39,15 +42,39 @@ cd k8s/infra
 sudo minikube tunnel
 ```
 
-### 3. 系統存取資訊
+### 3. 系統存取資訊 (Web UI)
+*   **Grafana 戰情室**: [http://grafana.local](http://grafana.local) (預設帳號: `admin`, 密碼: `admin`)
+    *   *註：請進入 Dashboards > Infar Custom > Infar - Microservices Overview 觀看即時流量。*
+*   **Flink 控制台**: [http://flink.local](http://flink.local)
 *   **ArgoCD**: [http://argocd.local](http://argocd.local) (預設帳號: `admin`, 密碼: `admin123`)
-*   **Grafana**: [http://grafana.local](http://grafana.local) (預設帳號: `admin`, 密碼: `admin`)
-    *   *註：Grafana 已預先配置 Linkerd 與 Loki 資料源，並自動載入官方流量分析儀表板。*
-*   **Service Mesh 拓撲**: 執行 `linkerd viz dashboard` 即可觀看微服務間的即時連線狀態。
-*   **資料庫密碼**: 在安裝過程中由 K8s Secrets 動態生成，請參閱腳本執行後的終端機輸出。
+*   **Service Mesh 拓撲**: 執行 `linkerd viz dashboard` 觀看微服務實時連線狀態。
 
-### 4. 執行健康檢查
-提供自動化腳本，以驗證所有組件、連線狀態及 RediSearch 模組是否正確運作：
+### 4. 開發者本機連線指南 (Local Port-Forwarding)
+為了讓開發者能在本機使用資料庫工具 (如 DataGrip, DBeaver) 或是撰寫 Go 程式測試，請使用以下指令開啟通道：
+
+**A. 取得動態資料庫密碼**
+```bash
+# PostgreSQL 密碼
+kubectl get secret infra-secrets -n infra -o jsonpath="{.data.postgresql-password}" | base64 --decode ; echo
+# Redis 密碼
+kubectl get secret infra-secrets -n infra -o jsonpath="{.data.redis-password}" | base64 --decode ; echo
+```
+
+**B. 開啟資料庫/服務通道 (於獨立終端機背景執行)**
+```bash
+# PostgreSQL (連線: 127.0.0.1:5432, db: infar_db, user: admin)
+kubectl port-forward svc/postgresql 5432:5432 -n infra &
+
+# Redis (連線: 127.0.0.1:6379)
+kubectl port-forward svc/redis-master 6379:6379 -n infra &
+
+# Kafka (連線: 127.0.0.1:9092)
+# 注意: 請確保本機 /etc/hosts 已加入 `127.0.0.1 kafka-service.infra.svc.cluster.local` 以避免 DNS 解析錯誤
+kubectl port-forward svc/kafka-service 9092:9092 -n infra &
+```
+
+### 5. 執行健康檢查
+提供自動化腳本，以驗證所有組件 (含 Kafka Broker, Flink TaskManager) 是否正確運作：
 ```bash
 ./k8s/infra/tests/verify.sh
 ```
@@ -60,17 +87,19 @@ sudo minikube tunnel
 
 ### 1. Ingress 與負載平衡 (AWS ALB)
 *   **變更設定**：建立一份專屬的 `aws-values.yaml`，將各服務的 `ingressClassName` 從 `nginx` 更改為 **`alb`**。
-*   **AWS 行為**：此動作將觸發 AWS Load Balancer Controller，自動為您的服務配置實體 Application Load Balancer，取代本機的 Nginx Controller。
+*   **AWS 行為**：此動作將觸發 AWS Load Balancer Controller，自動為您的服務配置實體 Application Load Balancer。
 *   **憑證綁定**：在 Ingress 的 Annotations 中加入 `alb.ingress.kubernetes.io/certificate-arn` 以對接 AWS Certificate Manager (ACM)，實現 HTTPS 加密。
 
 ### 2. 持久化儲存 (AWS EBS)
-*   **變更設定**：無需修改現有設定。
 *   **AWS 行為**：PostgreSQL 與 Redis 的 `PersistentVolumeClaim (PVC)` 將自動對接 EKS 的 EBS CSI Driver，在 AWS 上動態建立對應大小的 gp3 磁碟。
 
 ### 3. 密鑰與權限管理 (Secrets & IAM)
 *   **變更設定**：移除 `setup.sh` 中的隨機密碼生成邏輯。導入 **External Secrets Operator (ESO)**。
 *   **AWS 行為**：ESO 將直接從 **AWS Secrets Manager** 抓取正式環境的資料庫密碼，並注入 Kubernetes，實現最高等級的資安隔離。
-*   **微服務權限**：使用 IRSA (IAM Roles for Service Accounts) 取代傳統 IAM User 密鑰，讓未來的 go-zero 微服務能以最小權限安全存取 AWS S3 或 SQS 等服務。
+*   **微服務權限**：使用 IRSA (IAM Roles for Service Accounts) 讓未來的 go-zero 微服務能以最小權限安全存取 AWS 資源。
+
+### 4. 巨型基礎設施升級 (Kafka / Flink / Database)
+*   **架構建議**：在 AWS 生態系中，強烈建議將 `PostgreSQL`, `Redis`, `Kafka` 從 K8s 叢集中剝離，改為使用 AWS 託管服務 (如 **Amazon RDS**, **ElastiCache**, **Amazon MSK**)。這將大幅降低 EKS 節點的維運成本與 OOM 風險。
 
 ---
 
@@ -81,11 +110,11 @@ sudo minikube tunnel
 ├── k8s/
 │   └── infra/
 │       ├── helm-values/    # 各基礎設施的宣告式 Helm 設定檔 (IaC)
-│       ├── manifests/      # 原生 K8s 部署資源 (Redis, Linkerd Auth, Job 等)
-│       ├── tests/          # 基礎設施健康檢查腳本
+│       ├── manifests/      # 原生 K8s 部署資源 (Kafka, Flink, 戰情室 Dashboard)
+│       ├── tests/          # 基礎設施健康檢查腳本 (verify.sh)
 │       └── setup.sh        # 一鍵式自動化安裝入口
-├── backend/                # [開發中] go-zero 微服務後端程式碼
-└── frontend/               # [開發中] 前端應用程式碼
+├── backend/                # [準備開發] go-zero 微服務後端程式碼
+└── frontend/               # [準備開發] 前端應用程式碼
 ```
 
 ---
