@@ -76,7 +76,7 @@ kubectl port-forward svc/kafka-service 9092:9092 -n infra &
 ### 5. 執行健康檢查
 提供自動化腳本，以驗證所有組件 (含 Kafka Broker, Flink TaskManager) 是否正確運作：
 ```bash
-./k8s/infra/tests/verify.sh
+./k8s/infra/verify.sh
 ```
 
 ---
@@ -111,7 +111,7 @@ kubectl port-forward svc/kafka-service 9092:9092 -n infra &
 │   └── infra/
 │       ├── helm-values/    # 各基礎設施的宣告式 Helm 設定檔 (IaC)
 │       ├── manifests/      # 原生 K8s 部署資源 (Kafka, Flink, 戰情室 Dashboard)
-│       ├── tests/          # 基礎設施健康檢查腳本 (verify.sh)
+│       ├── verify.sh       # 基礎設施健康檢查腳本
 │       └── setup.sh        # 一鍵式自動化安裝入口
 ├── backend/                # [準備開發] go-zero 微服務後端程式碼
 └── frontend/               # [準備開發] 前端應用程式碼
