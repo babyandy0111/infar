@@ -169,6 +169,7 @@ spec:
     metadata:
       annotations:
         config.linkerd.io/opaque-ports: "5432"
+        linkerd.io/inject: enabled
       labels:
         app.kubernetes.io/component: primary
         app.kubernetes.io/instance: infar-infra-postgres-c8f1e7ac
@@ -360,6 +361,7 @@ spec:
     metadata:
       annotations:
         config.linkerd.io/opaque-ports: "6379"
+        linkerd.io/inject: enabled
       labels:
         app: redis
     spec:
@@ -420,6 +422,8 @@ spec:
   serviceName: zookeeper
   template:
     metadata:
+      annotations:
+        linkerd.io/inject: enabled
       labels:
         app: zookeeper
     spec:
@@ -474,6 +478,9 @@ spec:
   serviceName: kafka
   template:
     metadata:
+      annotations:
+        config.linkerd.io/opaque-ports: 9092,2181
+        linkerd.io/inject: enabled
       labels:
         app: kafka
     spec:
@@ -500,7 +507,7 @@ spec:
         - command:
             - sh
             - -c
-            - rm -rf /kafka/meta.properties && echo 'Cleaned old metadata' || true
+            - rm -rf /kafka/* && echo 'Cleaned all old Kafka data to prevent Cluster ID mismatch' || true
           image: busybox:latest
           name: fix-cluster-id
           volumeMounts:
@@ -551,6 +558,7 @@ spec:
   template:
     metadata:
       annotations:
+        linkerd.io/inject: enabled
         prometheus.io/port: "4191"
         prometheus.io/scrape: "true"
       labels:
@@ -582,6 +590,7 @@ spec:
   template:
     metadata:
       annotations:
+        linkerd.io/inject: enabled
         prometheus.io/port: "4191"
         prometheus.io/scrape: "true"
       labels:
@@ -3586,8 +3595,8 @@ metadata:
   name: argocd-secret
   namespace: argocd
 data:
-  admin.password: JDJhJDEwJDF0NmRvYkhKY1p1Znp2LnhtWGtvdi43YnFjZ2JWYTVTY21SQmJpdTRjLkUwYVViYTlyN1Rx
-  admin.passwordMtime: MjAyNi0wNC0wMlQxNToyOTowMlo=
+  admin.password: JDJhJDEwJHVkbGQvSVZXako3VzFET1JhSU9iWk9xbVlaQlZtUVpXaFlRVkZSTmFmVFI1ZmpucE1NM3hh
+  admin.passwordMtime: MjAyNi0wNC0wMlQxNjowMTo0M1o=
 type: Opaque
 ---
 apiVersion: v1

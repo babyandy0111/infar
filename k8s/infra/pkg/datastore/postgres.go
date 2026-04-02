@@ -23,6 +23,7 @@ func CreatePostgreSQL(chart cdk8s.Chart) {
 			"architecture": "standalone",
 			"primary": map[string]interface{}{
 				"podAnnotations": map[string]interface{}{
+					"linkerd.io/inject":              "enabled",
 					"config.linkerd.io/opaque-ports": "5432",
 				},
 			},

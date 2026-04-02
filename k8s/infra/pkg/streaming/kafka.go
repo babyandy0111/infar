@@ -25,7 +25,12 @@ func CreateKafkaAndZookeeper(chart cdk8s.Chart) {
 			Replicas:    jsii.Number(1),
 			Selector:    &k8s.LabelSelector{MatchLabels: &zkLabel},
 			Template: &k8s.PodTemplateSpec{
-				Metadata: &k8s.ObjectMeta{Labels: &zkLabel},
+				Metadata: &k8s.ObjectMeta{
+					Labels: &zkLabel,
+					Annotations: &map[string]*string{
+						"linkerd.io/inject": jsii.String("enabled"),
+					},
+				},
 				Spec: &k8s.PodSpec{
 					Containers: &[]*k8s.Container{{
 						Name:  jsii.String("zookeeper"),
@@ -69,13 +74,19 @@ func CreateKafkaAndZookeeper(chart cdk8s.Chart) {
 			Replicas:    jsii.Number(1),
 			Selector:    &k8s.LabelSelector{MatchLabels: &kLabel},
 			Template: &k8s.PodTemplateSpec{
-				Metadata: &k8s.ObjectMeta{Labels: &kLabel},
+				Metadata: &k8s.ObjectMeta{
+					Labels: &kLabel,
+					Annotations: &map[string]*string{
+						"linkerd.io/inject":              jsii.String("enabled"),
+						"config.linkerd.io/opaque-ports": jsii.String("9092,2181"),
+					},
+				},
 				Spec: &k8s.PodSpec{
 					// InitContainer: 如果發現資料不一致，強制清理 meta.properties (核心修復)
 					InitContainers: &[]*k8s.Container{{
 						Name:    jsii.String("fix-cluster-id"),
 						Image:   jsii.String("busybox:latest"),
-						Command: &[]*string{jsii.String("sh"), jsii.String("-c"), jsii.String("rm -rf /kafka/meta.properties && echo 'Cleaned old metadata' || true")},
+						Command: &[]*string{jsii.String("sh"), jsii.String("-c"), jsii.String("rm -rf /kafka/* && echo 'Cleaned all old Kafka data to prevent Cluster ID mismatch' || true")},
 						VolumeMounts: &[]*k8s.VolumeMount{
 							{Name: jsii.String("data"), MountPath: jsii.String("/kafka")},
 						},

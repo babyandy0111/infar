@@ -27,6 +27,7 @@ func CreateRedis(chart cdk8s.Chart) {
 				Metadata: &k8s.ObjectMeta{
 					Labels: &label,
 					Annotations: &map[string]*string{
+						"linkerd.io/inject":              jsii.String("enabled"),
 						"config.linkerd.io/opaque-ports": jsii.String("6379"),
 					},
 				},

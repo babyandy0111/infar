@@ -10,11 +10,6 @@ func CreateFlink(chart cdk8s.Chart) {
 	jmLabel := map[string]*string{"app": jsii.String("flink"), "component": jsii.String("jobmanager")}
 	tmLabel := map[string]*string{"app": jsii.String("flink"), "component": jsii.String("taskmanager")}
 
-	anno := map[string]*string{
-		"prometheus.io/scrape": jsii.String("true"),
-		"prometheus.io/port":   jsii.String("4191"),
-	}
-
 	// JobManager Service
 	k8s.NewKubeService(chart, jsii.String("flink-jm-svc"), &k8s.KubeServiceProps{
 		Metadata: &k8s.ObjectMeta{Name: jsii.String("flink-jobmanager"), Namespace: jsii.String("infra")},
@@ -34,7 +29,14 @@ func CreateFlink(chart cdk8s.Chart) {
 			Replicas: jsii.Number(1),
 			Selector: &k8s.LabelSelector{MatchLabels: &jmLabel},
 			Template: &k8s.PodTemplateSpec{
-				Metadata: &k8s.ObjectMeta{Labels: &jmLabel, Annotations: &anno},
+				Metadata: &k8s.ObjectMeta{
+					Labels: &jmLabel,
+					Annotations: &map[string]*string{
+						"linkerd.io/inject":    jsii.String("enabled"),
+						"prometheus.io/scrape": jsii.String("true"),
+						"prometheus.io/port":   jsii.String("4191"),
+					},
+				},
 				Spec: &k8s.PodSpec{
 					Containers: &[]*k8s.Container{{Name: jsii.String("jobmanager"), Image: jsii.String("flink:1.18.1-java11"), Args: &[]*string{jsii.String("jobmanager")}, Ports: &[]*k8s.ContainerPort{{ContainerPort: jsii.Number(6123)}, {ContainerPort: jsii.Number(8081)}}}},
 				},
@@ -49,7 +51,14 @@ func CreateFlink(chart cdk8s.Chart) {
 			Replicas: jsii.Number(1),
 			Selector: &k8s.LabelSelector{MatchLabels: &tmLabel},
 			Template: &k8s.PodTemplateSpec{
-				Metadata: &k8s.ObjectMeta{Labels: &tmLabel, Annotations: &anno},
+				Metadata: &k8s.ObjectMeta{
+					Labels: &tmLabel,
+					Annotations: &map[string]*string{
+						"linkerd.io/inject":    jsii.String("enabled"),
+						"prometheus.io/scrape": jsii.String("true"),
+						"prometheus.io/port":   jsii.String("4191"),
+					},
+				},
 				Spec: &k8s.PodSpec{
 					Containers: &[]*k8s.Container{{Name: jsii.String("taskmanager"), Image: jsii.String("flink:1.18.1-java11"), Args: &[]*string{jsii.String("taskmanager")}, Env: &[]*k8s.EnvVar{{Name: jsii.String("JOB_MANAGER_RPC_ADDRESS"), Value: jsii.String("flink-jobmanager.infra.svc.cluster.local")}}}},
 				},
