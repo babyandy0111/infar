@@ -87,7 +87,7 @@ printf "   - 驗證 Kafka Broker 運作:     "
 KAFKA_POD=$(kubectl get pods -n infra -l app=kafka -o jsonpath="{.items[0].metadata.name}" 2>/dev/null)
 if [ ! -z "$KAFKA_POD" ]; then
     # 使用 kafka-topics.sh 來測試是否能跟 Kafka Broker 通訊
-    if kubectl exec -n infra "$KAFKA_POD" -c kafka -- /opt/kafka/bin/kafka-topics.sh --list --bootstrap-server localhost:9092 &> /dev/null; then
+    if kubectl exec -n infra "$KAFKA_POD" -c kafka -- /opt/kafka/bin/kafka-topics.sh --list --bootstrap-server kafka-service:9092 &> /dev/null; then
         echo "✅ PASS (Broker 連線正常)"
     else
         echo "❌ FAIL (Broker 拒絕連線或未啟動)"
