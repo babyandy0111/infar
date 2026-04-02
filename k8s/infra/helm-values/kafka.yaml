@@ -1,34 +1,68 @@
-# 啟用 KRaft 模式，拋棄 ZooKeeper，大幅節省記憶體
+# 關閉 KRaft 模式，回歸穩定且支援單機的 ZooKeeper 模式
 kraft:
-  enabled: true
-
-# 關閉 ZooKeeper
-zookeeper:
   enabled: false
 
-# 單節點模式適合本機開發
-replicaCount: 1
+# 啟用輕量級 ZooKeeper (僅供本機開發)
+zookeeper:
+  enabled: true
+  replicaCount: 1
+  persistence:
+    enabled: true
+    size: 1Gi
+  resources:
+    limits:
+      memory: 512Mi
+    requests:
+      memory: 256Mi
 
-# 資源限制 (對 M3 Pro 溫柔一點)
-resources:
-  limits:
-    memory: 1Gi
-  requests:
-    memory: 512Mi
+# 強制單節點模式 (節省 M3 Pro 資源)
+replicaCount: 1
+broker:
+  replicaCount: 1
+  resources:
+    limits:
+      memory: 1Gi
+    requests:
+      memory: 256Mi
 
 # 持久化設定
 persistence:
   enabled: true
   size: 2Gi
 
-# 允許本機透過 NodePort 存取 Kafka (方便 Go 程式在 K8s 外測試)
+# 允許本機透過 NodePort 存取 Kafka
 externalAccess:
   enabled: true
   controller:
     forceNodePort: true
   autoDiscovery:
     enabled: true
+    # 修正 Bitnami 預設錯誤的 kubectl 映像檔版本
+    image:
+      registry: docker.io
+      repository: bitnami/kubectl
+      tag: 1.30.2-debian-12-r1
   broker:
     protocol: PLAINTEXT
     service:
       type: NodePort
+
+# 為了讓 externalAccess 的自動偵測生效，必須開啟以下 RBAC 權限
+rbac:
+  create: true
+controller:
+  automountServiceAccountToken: true
+  # 放寬 M3 Pro 資源，讓 3 個節點跑起來不卡頓
+  resources:
+    limits:
+      memory: 1Gi
+    requests:
+      memory: 256Mi
+broker:
+  automountServiceAccountToken: true
+  # 同上
+  resources:
+    limits:
+      memory: 1Gi
+    requests:
+      memory: 256Mi

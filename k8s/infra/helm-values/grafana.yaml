@@ -5,6 +5,12 @@ persistence:
   enabled: true
   size: 2Gi
 
+# 強制設定 SecurityContext，避免 init-chown-data 權限不足的 Error
+securityContext:
+  runAsUser: 472
+  runAsGroup: 472
+  fsGroup: 472
+
 ingress:
   enabled: true
   hosts:
