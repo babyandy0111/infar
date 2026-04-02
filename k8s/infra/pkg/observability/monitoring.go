@@ -74,6 +74,7 @@ func CreateMonitoring(chart cdk8s.Chart) {
 		Namespace: jsii.String("observability"),
 		Values: &map[string]interface{}{
 			"adminPassword":            "admin",
+			"testFramework":            map[string]interface{}{"enabled": false},
 			"service":                  map[string]interface{}{"type": "NodePort"},
 			"persistence":              map[string]interface{}{"enabled": true, "size": "2Gi"},
 			"podSecurityContext":       map[string]interface{}{"runAsUser": 472, "runAsGroup": 472, "fsGroup": 472},

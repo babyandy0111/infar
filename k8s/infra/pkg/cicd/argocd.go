@@ -21,6 +21,11 @@ func CreateArgoCD(chart cdk8s.Chart, adminPassword string) {
 		Version:   jsii.String("9.4.17"),
 		Namespace: jsii.String("argocd"),
 		Values: &map[string]interface{}{
+			"redis": map[string]interface{}{
+				"secret": map[string]interface{}{
+					"createInitJob": false,
+				},
+			},
 			"server": map[string]interface{}{
 				"service": map[string]interface{}{
 					"type": "NodePort",
