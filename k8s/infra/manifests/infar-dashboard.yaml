@@ -8,7 +8,7 @@ metadata:
 data:
   infar-overview.json: |
     {
-      "title": "Infar - Microservices Overview",
+      "title": "Infar - Microservices War Room",
       "timezone": "browser",
       "refresh": "5s",
       "schemaVersion": 30,
@@ -16,32 +16,74 @@ data:
         {
           "type": "stat",
           "title": "Global Success Rate (infra)",
-          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+          "gridPos": { "h": 5, "w": 8, "x": 0, "y": 0 },
           "targets": [
             {
               "expr": "sum(rate(response_total{namespace=\"infra\", classification=\"success\"}[1m])) / sum(rate(response_total{namespace=\"infra\"}[1m])) * 100",
               "legendFormat": "Success Rate",
-              "refId": "A",
               "datasource": {"type": "prometheus", "uid": "Linkerd-Prometheus"}
             }
           ],
           "options": {
             "colorMode": "value",
             "graphMode": "area",
-            "justifyMode": "auto",
-            "reduceOptions": { "calcs": ["lastNotNull"], "values": false, "fields": "" },
-            "textMode": "auto"
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "Total RPS (Requests Per Second)",
+          "gridPos": { "h": 5, "w": 8, "x": 8, "y": 0 },
+          "targets": [
+            {
+              "expr": "sum(rate(response_total{namespace=\"infra\"}[1m]))",
+              "legendFormat": "RPS",
+              "datasource": {"type": "prometheus", "uid": "Linkerd-Prometheus"}
+            }
+          ],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false }
+          }
+        },
+        {
+          "type": "stat",
+          "title": "P99 Latency (ms)",
+          "gridPos": { "h": 5, "w": 8, "x": 16, "y": 0 },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(response_latency_ms_bucket{namespace=\"infra\"}[1m])) by (le))",
+              "legendFormat": "P99 Latency",
+              "datasource": {"type": "prometheus", "uid": "Linkerd-Prometheus"}
+            }
+          ],
+          "options": {
+            "colorMode": "value",
+            "graphMode": "area",
+            "reduceOptions": { "calcs": ["lastNotNull"], "values": false }
           }
         },
         {
           "type": "timeseries",
-          "title": "Request Volume by Pod",
-          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+          "title": "Success Rate by Pod (%)",
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+          "targets": [
+            {
+              "expr": "sum by (pod) (rate(response_total{namespace=\"infra\", classification=\"success\"}[1m])) / sum by (pod) (rate(response_total{namespace=\"infra\"}[1m])) * 100",
+              "legendFormat": "{{pod}}",
+              "datasource": {"type": "prometheus", "uid": "Linkerd-Prometheus"}
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Request Volume by Pod (RPS)",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
           "targets": [
             {
               "expr": "sum by (pod) (rate(response_total{namespace=\"infra\"}[1m]))",
               "legendFormat": "{{pod}}",
-              "refId": "A",
               "datasource": {"type": "prometheus", "uid": "Linkerd-Prometheus"}
             }
           ]
@@ -49,12 +91,28 @@ data:
         {
           "type": "timeseries",
           "title": "TCP Connections by Pod",
-          "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+          "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
           "targets": [
             {
               "expr": "sum by (pod) (rate(tcp_open_total{namespace=\"infra\"}[1m]))",
               "legendFormat": "{{pod}}",
-              "refId": "A",
+              "datasource": {"type": "prometheus", "uid": "Linkerd-Prometheus"}
+            }
+          ]
+        },
+        {
+          "type": "timeseries",
+          "title": "Network Throughput (Read/Write Bytes)",
+          "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+          "targets": [
+            {
+              "expr": "sum by (pod) (rate(tcp_read_bytes_total{namespace=\"infra\"}[1m]))",
+              "legendFormat": "{{pod}} - Read",
+              "datasource": {"type": "prometheus", "uid": "Linkerd-Prometheus"}
+            },
+            {
+              "expr": "sum by (pod) (rate(tcp_write_bytes_total{namespace=\"infra\"}[1m]))",
+              "legendFormat": "{{pod}} - Write",
               "datasource": {"type": "prometheus", "uid": "Linkerd-Prometheus"}
             }
           ]
