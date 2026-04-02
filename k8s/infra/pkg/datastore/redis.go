@@ -18,7 +18,7 @@ func CreateRedis(chart cdk8s.Chart) {
 	})
 
 	k8s.NewKubeStatefulSet(chart, jsii.String("redis-stack"), &k8s.KubeStatefulSetProps{
-		Metadata: &k8s.ObjectMeta{Namespace: jsii.String("infra"), Labels: &label},
+		Metadata: &k8s.ObjectMeta{Name: jsii.String("redis"), Namespace: jsii.String("infra"), Labels: &label},
 		Spec: &k8s.StatefulSetSpec{
 			ServiceName: jsii.String("redis-master"),
 			Replicas:    jsii.Number(1),

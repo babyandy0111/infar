@@ -11,6 +11,8 @@ func CreatePostgreSQL(chart cdk8s.Chart) {
 		Version:   jsii.String("18.5.14"),
 		Namespace: jsii.String("infra"),
 		Values: &map[string]interface{}{
+			"fullnameOverride": "postgres",
+			"nameOverride":     "postgres",
 			"auth": map[string]interface{}{
 				"database":       "infar_db",
 				"username":       "admin",

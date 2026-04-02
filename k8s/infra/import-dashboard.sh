@@ -1,6 +1,8 @@
 #!/bin/bash
 # 取得 Grafana 密碼
-GRAFANA_PASS=$(kubectl get secret --namespace observability infar-infra-grafana-c8f1e7ac -o jsonpath="{.data.admin-password}" | base64 --decode)
+# 動態抓取 Grafana 的 Secret 名稱
+GRAFANA_SECRET_NAME=$(kubectl get secret -n observability -l app.kubernetes.io/name=grafana -o jsonpath='{.items[0].metadata.name}')
+GRAFANA_PASS=$(kubectl get secret --namespace observability "$GRAFANA_SECRET_NAME" -o jsonpath="{.data.admin-password}" | base64 --decode)
 
 # 準備完整的 7 大維度 JSON
 cat << 'JSON_EOF' > /tmp/infar-dashboard.json
@@ -111,7 +113,8 @@ echo "等待 Grafana API 就緒..."
 kubectl wait --for=condition=Ready pod -l app.kubernetes.io/name=grafana -n observability --timeout=60s > /dev/null
 
 # 開啟臨時通道
-kubectl port-forward svc/infar-infra-grafana-c8f1e7ac 3000:80 -n observability > /dev/null 2>&1 &
+GRAFANA_SVC=$(kubectl get svc -n observability -l app.kubernetes.io/name=grafana -o jsonpath='{.items[0].metadata.name}')
+kubectl port-forward svc/"$GRAFANA_SVC" 3000:80 -n observability > /dev/null 2>&1 &
 PORT_FORWARD_PID=$!
 sleep 5
 

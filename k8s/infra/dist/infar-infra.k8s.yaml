@@ -38,11 +38,11 @@ metadata:
     app.kubernetes.io/component: primary
     app.kubernetes.io/instance: infar-infra-postgres-c8f1e7ac
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/name: postgres
     app.kubernetes.io/version: 18.3.0
     helm.sh/chart: postgresql-18.5.14
     project: infar
-  name: infar-infra-postgres-c8f1e7ac-postgresql
+  name: postgres
   namespace: infra
 spec:
   egress:
@@ -54,7 +54,7 @@ spec:
     matchLabels:
       app.kubernetes.io/component: primary
       app.kubernetes.io/instance: infar-infra-postgres-c8f1e7ac
-      app.kubernetes.io/name: postgresql
+      app.kubernetes.io/name: postgres
   policyTypes:
     - Ingress
     - Egress
@@ -66,11 +66,11 @@ metadata:
     app.kubernetes.io/component: primary
     app.kubernetes.io/instance: infar-infra-postgres-c8f1e7ac
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/name: postgres
     app.kubernetes.io/version: 18.3.0
     helm.sh/chart: postgresql-18.5.14
     project: infar
-  name: infar-infra-postgres-c8f1e7ac-postgresql
+  name: postgres
   namespace: infra
 spec:
   maxUnavailable: 1
@@ -78,7 +78,7 @@ spec:
     matchLabels:
       app.kubernetes.io/component: primary
       app.kubernetes.io/instance: infar-infra-postgres-c8f1e7ac
-      app.kubernetes.io/name: postgresql
+      app.kubernetes.io/name: postgres
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -86,11 +86,11 @@ metadata:
   labels:
     app.kubernetes.io/instance: infar-infra-postgres-c8f1e7ac
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/name: postgres
     app.kubernetes.io/version: 18.3.0
     helm.sh/chart: postgresql-18.5.14
     project: infar
-  name: infar-infra-postgres-c8f1e7ac-postgresql
+  name: postgres
   namespace: infra
 automountServiceAccountToken: false
 ---
@@ -101,11 +101,11 @@ metadata:
     app.kubernetes.io/component: primary
     app.kubernetes.io/instance: infar-infra-postgres-c8f1e7ac
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/name: postgres
     app.kubernetes.io/version: 18.3.0
     helm.sh/chart: postgresql-18.5.14
     project: infar
-  name: infar-infra-postgres-c8f1e7ac-postgresql-hl
+  name: postgres-hl
   namespace: infra
 spec:
   clusterIP: None
@@ -117,7 +117,7 @@ spec:
   selector:
     app.kubernetes.io/component: primary
     app.kubernetes.io/instance: infar-infra-postgres-c8f1e7ac
-    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/name: postgres
   type: ClusterIP
 ---
 apiVersion: v1
@@ -127,11 +127,11 @@ metadata:
     app.kubernetes.io/component: primary
     app.kubernetes.io/instance: infar-infra-postgres-c8f1e7ac
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/name: postgres
     app.kubernetes.io/version: 18.3.0
     helm.sh/chart: postgresql-18.5.14
     project: infar
-  name: infar-infra-postgres-c8f1e7ac-postgresql
+  name: postgres
   namespace: infra
 spec:
   ports:
@@ -141,7 +141,7 @@ spec:
   selector:
     app.kubernetes.io/component: primary
     app.kubernetes.io/instance: infar-infra-postgres-c8f1e7ac
-    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/name: postgres
   type: ClusterIP
 ---
 apiVersion: apps/v1
@@ -151,11 +151,11 @@ metadata:
     app.kubernetes.io/component: primary
     app.kubernetes.io/instance: infar-infra-postgres-c8f1e7ac
     app.kubernetes.io/managed-by: Helm
-    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/name: postgres
     app.kubernetes.io/version: 18.3.0
     helm.sh/chart: postgresql-18.5.14
     project: infar
-  name: infar-infra-postgres-c8f1e7ac-postgresql
+  name: postgres
   namespace: infra
 spec:
   replicas: 1
@@ -163,8 +163,8 @@ spec:
     matchLabels:
       app.kubernetes.io/component: primary
       app.kubernetes.io/instance: infar-infra-postgres-c8f1e7ac
-      app.kubernetes.io/name: postgresql
-  serviceName: infar-infra-postgres-c8f1e7ac-postgresql-hl
+      app.kubernetes.io/name: postgres
+  serviceName: postgres-hl
   template:
     metadata:
       annotations:
@@ -174,10 +174,10 @@ spec:
         app.kubernetes.io/component: primary
         app.kubernetes.io/instance: infar-infra-postgres-c8f1e7ac
         app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: postgresql
+        app.kubernetes.io/name: postgres
         app.kubernetes.io/version: 18.3.0
         helm.sh/chart: postgresql-18.5.14
-      name: infar-infra-postgres-c8f1e7ac-postgresql
+      name: postgres
     spec:
       affinity:
         podAntiAffinity:
@@ -187,7 +187,7 @@ spec:
                   matchLabels:
                     app.kubernetes.io/component: primary
                     app.kubernetes.io/instance: infar-infra-postgres-c8f1e7ac
-                    app.kubernetes.io/name: postgresql
+                    app.kubernetes.io/name: postgres
                 topologyKey: kubernetes.io/hostname
               weight: 1
       automountServiceAccountToken: false
@@ -303,7 +303,7 @@ spec:
         fsGroupChangePolicy: Always
         supplementalGroups: []
         sysctls: []
-      serviceAccountName: infar-infra-postgres-c8f1e7ac-postgresql
+      serviceAccountName: postgres
       volumes:
         - emptyDir: {}
           name: empty-dir
@@ -349,7 +349,7 @@ metadata:
   labels:
     app: redis
     project: infar
-  name: infar-infra-redis-stack-c84c082c
+  name: redis
   namespace: infra
 spec:
   replicas: 1
@@ -656,7 +656,7 @@ metadata:
     app.kubernetes.io/version: 1.8.2
     helm.sh/chart: prometheus-node-exporter-4.39.0
     project: infar
-  name: infar-infra-prometheus-c8f1e7ac-prometheus-node-exporter
+  name: prometheus-node-exporter
   namespace: observability
 automountServiceAccountToken: false
 ---
@@ -686,7 +686,7 @@ metadata:
     app.kubernetes.io/version: v2.54.1
     helm.sh/chart: prometheus-25.27.0
     project: infar
-  name: infar-infra-prometheus-c8f1e7ac-server
+  name: prometheus-server
   namespace: observability
 ---
 apiVersion: v1
@@ -701,7 +701,7 @@ metadata:
     app.kubernetes.io/version: v2.54.1
     helm.sh/chart: prometheus-25.27.0
     project: infar
-  name: infar-infra-prometheus-c8f1e7ac-server
+  name: prometheus-server
   namespace: observability
 data:
   alerting_rules.yml: |
@@ -1251,7 +1251,7 @@ metadata:
     app.kubernetes.io/version: v2.54.1
     helm.sh/chart: prometheus-25.27.0
     project: infar
-  name: infar-infra-prometheus-c8f1e7ac-server
+  name: prometheus-server
 rules:
   - apiGroups:
       - ""
@@ -1325,14 +1325,14 @@ metadata:
     app.kubernetes.io/version: v2.54.1
     helm.sh/chart: prometheus-25.27.0
     project: infar
-  name: infar-infra-prometheus-c8f1e7ac-server
+  name: prometheus-server
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: infar-infra-prometheus-c8f1e7ac-server
+  name: prometheus-server
 subjects:
   - kind: ServiceAccount
-    name: infar-infra-prometheus-c8f1e7ac-server
+    name: prometheus-server
     namespace: observability
 ---
 apiVersion: v1
@@ -1376,7 +1376,7 @@ metadata:
     app.kubernetes.io/version: 1.8.2
     helm.sh/chart: prometheus-node-exporter-4.39.0
     project: infar
-  name: infar-infra-prometheus-c8f1e7ac-prometheus-node-exporter
+  name: prometheus-node-exporter
   namespace: observability
 spec:
   ports:
@@ -1426,7 +1426,7 @@ metadata:
     app.kubernetes.io/version: v2.54.1
     helm.sh/chart: prometheus-25.27.0
     project: infar
-  name: infar-infra-prometheus-c8f1e7ac-server
+  name: prometheus-server
   namespace: observability
 spec:
   ports:
@@ -1453,7 +1453,7 @@ metadata:
     app.kubernetes.io/version: 1.8.2
     helm.sh/chart: prometheus-node-exporter-4.39.0
     project: infar
-  name: infar-infra-prometheus-c8f1e7ac-prometheus-node-exporter
+  name: prometheus-node-exporter
   namespace: observability
 spec:
   revisionHistoryLimit: 10
@@ -1537,7 +1537,7 @@ spec:
         runAsGroup: 65534
         runAsNonRoot: true
         runAsUser: 65534
-      serviceAccountName: infar-infra-prometheus-c8f1e7ac-prometheus-node-exporter
+      serviceAccountName: prometheus-node-exporter
       tolerations:
         - effect: NoSchedule
           operator: Exists
@@ -1713,7 +1713,7 @@ metadata:
     app.kubernetes.io/version: v2.54.1
     helm.sh/chart: prometheus-25.27.0
     project: infar
-  name: infar-infra-prometheus-c8f1e7ac-server
+  name: prometheus-server
   namespace: observability
 spec:
   replicas: 1
@@ -1809,11 +1809,11 @@ spec:
         runAsGroup: 65534
         runAsNonRoot: true
         runAsUser: 65534
-      serviceAccountName: infar-infra-prometheus-c8f1e7ac-server
+      serviceAccountName: prometheus-server
       terminationGracePeriodSeconds: 300
       volumes:
         - configMap:
-            name: infar-infra-prometheus-c8f1e7ac-server
+            name: prometheus-server
           name: config-volume
         - emptyDir: {}
           name: storage-volume
@@ -1841,7 +1841,7 @@ metadata:
     app.kubernetes.io/version: 3.6.7
     helm.sh/chart: loki-6.55.0
     project: infar
-  name: infar-infra-loki-c8f1e7ac
+  name: loki
   namespace: observability
 automountServiceAccountToken: true
 ---
@@ -1869,7 +1869,7 @@ data:
         addresses: ""
       enabled: false
     common:
-      compactor_grpc_address: 'infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:9095'
+      compactor_grpc_address: 'loki.observability.svc.cluster.local:9095'
       path_prefix: /var/loki
       replication_factor: 1
       storage:
@@ -1892,7 +1892,7 @@ data:
       volume_enabled: true
     memberlist:
       join_members:
-      - infar-infra-loki-c8f1e7ac-memberlist.observability.svc.cluster.local
+      - loki-memberlist.observability.svc.cluster.local
     pattern_ingester:
       enabled: false
     query_range:
@@ -1945,7 +1945,7 @@ metadata:
     app.kubernetes.io/version: 3.6.7
     helm.sh/chart: loki-6.55.0
     project: infar
-  name: infar-infra-loki-c8f1e7ac-gateway
+  name: loki-gateway
   namespace: observability
 data:
   nginx.conf: |
@@ -2003,35 +2003,35 @@ data:
         # Configure backend targets
         location ^~ /ui {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
 
         # Distributor
         location = /api/prom/push {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
         location = /loki/api/v1/push {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
         location = /distributor/ring {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
         location = /otlp/v1/logs {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
 
         # Ingester
         location = /flush {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
         location ^~ /ingester/ {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
         location = /ingester {
           
@@ -2041,75 +2041,75 @@ data:
         # Ring
         location = /ring {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
 
         # MemberListKV
         location = /memberlist {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
 
         # Ruler
         location = /ruler/ring {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
         location = /api/prom/rules {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
         location ^~ /api/prom/rules/ {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
         location = /loki/api/v1/rules {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
         location ^~ /loki/api/v1/rules/ {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
         location = /prometheus/api/v1/alerts {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
         location = /prometheus/api/v1/rules {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
 
         # Compactor
         location = /compactor/ring {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
         location = /loki/api/v1/delete {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
         location = /loki/api/v1/cache/generation_numbers {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
 
         # IndexGateway
         location = /indexgateway/ring {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
 
         # QueryScheduler
         location = /scheduler/ring {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
 
         # Config
         location = /config {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
 
 
@@ -2118,17 +2118,17 @@ data:
           proxy_set_header Upgrade $http_upgrade;
           proxy_set_header Connection "upgrade";
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
         location = /loki/api/v1/tail {
           proxy_set_header Upgrade $http_upgrade;
           proxy_set_header Connection "upgrade";
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
         location ^~ /api/prom/ {
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
         location = /api/prom {
           
@@ -2138,7 +2138,7 @@ data:
           # pass custom headers set by Grafana as X-Query-Tags which are logged as key/value pairs in metrics.go log messages
           proxy_set_header X-Query-Tags "${query_tags},user=${http_x_grafana_user},dashboard_id=${http_x_dashboard_uid},dashboard_title=${http_x_dashboard_title},panel_id=${http_x_panel_id},panel_title=${http_x_panel_title},source_rule_uid=${http_x_rule_uid},rule_name=${http_x_rule_name},rule_folder=${http_x_rule_folder},rule_version=${http_x_rule_version},rule_source=${http_x_rule_source},rule_type=${http_x_rule_type}";
           
-          proxy_pass       http://infar-infra-loki-c8f1e7ac.observability.svc.cluster.local:3100$request_uri;
+          proxy_pass       http://loki.observability.svc.cluster.local:3100$request_uri;
         }
         location = /loki/api/v1 {
           
@@ -2171,7 +2171,7 @@ metadata:
     app.kubernetes.io/version: 3.6.7
     helm.sh/chart: loki-6.55.0
     project: infar
-  name: infar-infra-loki-c8f1e7ac-clusterrole
+  name: loki-clusterrole
 rules:
   - apiGroups:
       - ""
@@ -2192,14 +2192,14 @@ metadata:
     app.kubernetes.io/version: 3.6.7
     helm.sh/chart: loki-6.55.0
     project: infar
-  name: infar-infra-loki-c8f1e7ac-clusterrolebinding
+  name: loki-clusterrolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: infar-infra-loki-c8f1e7ac-clusterrole
+  name: loki-clusterrole
 subjects:
   - kind: ServiceAccount
-    name: infar-infra-loki-c8f1e7ac
+    name: loki
     namespace: observability
 ---
 apiVersion: v1
@@ -2213,7 +2213,7 @@ metadata:
     helm.sh/chart: loki-6.55.0
     project: infar
     prometheus.io/service-monitor: "false"
-  name: infar-infra-loki-c8f1e7ac-gateway
+  name: loki-gateway
   namespace: observability
 spec:
   ports:
@@ -2260,7 +2260,7 @@ metadata:
     app.kubernetes.io/version: 3.6.7
     helm.sh/chart: loki-6.55.0
     project: infar
-  name: infar-infra-loki-c8f1e7ac-memberlist
+  name: loki-memberlist
   namespace: observability
 spec:
   clusterIP: None
@@ -2308,7 +2308,7 @@ metadata:
     app.kubernetes.io/version: 3.6.7
     helm.sh/chart: loki-6.55.0
     project: infar
-  name: infar-infra-loki-c8f1e7ac
+  name: loki
   namespace: observability
 spec:
   ports:
@@ -2353,7 +2353,7 @@ spec:
     spec:
       containers:
         - args:
-            - -addr=infar-infra-loki-c8f1e7ac-gateway.observability.svc.cluster.local.:80
+            - -addr=loki-gateway.observability.svc.cluster.local.:80
             - -labelname=pod
             - -labelvalue=$(POD_NAME)
             - -push=true
@@ -2403,7 +2403,7 @@ metadata:
     app.kubernetes.io/version: 3.6.7
     helm.sh/chart: loki-6.55.0
     project: infar
-  name: infar-infra-loki-c8f1e7ac-gateway
+  name: loki-gateway
   namespace: observability
 spec:
   replicas: 1
@@ -2418,7 +2418,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: fc077172e67579dbdf30817b9d3e3c08da420a887d9ff7bfde028de9e0b1bf70
+        checksum/config: 47638ceb90bf8930cdef8cac95ca193b2e98976addf4e037a47b4cf078b58ad4
       labels:
         app.kubernetes.io/component: gateway
         app.kubernetes.io/instance: infar-infra-loki-c8f1e7ac
@@ -2467,11 +2467,11 @@ spec:
         runAsGroup: 101
         runAsNonRoot: true
         runAsUser: 101
-      serviceAccountName: infar-infra-loki-c8f1e7ac
+      serviceAccountName: loki
       terminationGracePeriodSeconds: 30
       volumes:
         - configMap:
-            name: infar-infra-loki-c8f1e7ac-gateway
+            name: loki-gateway
           name: config
         - emptyDir: {}
           name: tmp
@@ -2489,7 +2489,7 @@ metadata:
     app.kubernetes.io/version: 3.6.7
     helm.sh/chart: loki-6.55.0
     project: infar
-  name: infar-infra-loki-c8f1e7ac
+  name: loki
   namespace: observability
 spec:
   persistentVolumeClaimRetentionPolicy:
@@ -2503,11 +2503,11 @@ spec:
       app.kubernetes.io/component: single-binary
       app.kubernetes.io/instance: infar-infra-loki-c8f1e7ac
       app.kubernetes.io/name: loki
-  serviceName: infar-infra-loki-c8f1e7ac-headless
+  serviceName: loki-headless
   template:
     metadata:
       annotations:
-        checksum/config: eedcfa286c9beba97085a66c949cd1e2cb7f9b58a2c540fc0c7af9d8bc0ca6aa
+        checksum/config: 0bd1de926d8a6c74890f808a2dbb55d0fd5689b9ca9b9bf6e8c50a75e82abc1c
         kubectl.kubernetes.io/default-container: loki
         storage/size: 10Gi
       labels:
@@ -2606,7 +2606,7 @@ spec:
         runAsGroup: 10001
         runAsNonRoot: true
         runAsUser: 10001
-      serviceAccountName: infar-infra-loki-c8f1e7ac
+      serviceAccountName: loki
       terminationGracePeriodSeconds: 30
       volumes:
         - emptyDir: {}
@@ -2647,7 +2647,7 @@ metadata:
     app.kubernetes.io/version: 3.5.1
     helm.sh/chart: promtail-6.17.1
     project: infar
-  name: infar-infra-promtail-c8f1e7ac
+  name: promtail
   namespace: observability
 automountServiceAccountToken: true
 ---
@@ -2661,7 +2661,7 @@ metadata:
     app.kubernetes.io/version: 3.5.1
     helm.sh/chart: promtail-6.17.1
     project: infar
-  name: infar-infra-promtail-c8f1e7ac
+  name: promtail
   namespace: observability
 stringData:
   promtail.yaml: |
@@ -2672,7 +2672,7 @@ stringData:
       
 
     clients:
-      - url: http://loki-gateway.observability.svc.cluster.local:3100/loki/api/v1/push
+      - url: http://loki-gateway.observability.svc.cluster.local/loki/api/v1/push
 
     positions:
       filename: /run/promtail/positions.yaml
@@ -2768,7 +2768,7 @@ metadata:
     app.kubernetes.io/version: 3.5.1
     helm.sh/chart: promtail-6.17.1
     project: infar
-  name: infar-infra-promtail-c8f1e7ac
+  name: promtail
 rules:
   - apiGroups:
       - ""
@@ -2793,14 +2793,14 @@ metadata:
     app.kubernetes.io/version: 3.5.1
     helm.sh/chart: promtail-6.17.1
     project: infar
-  name: infar-infra-promtail-c8f1e7ac
+  name: promtail
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: infar-infra-promtail-c8f1e7ac
+  name: promtail
 subjects:
   - kind: ServiceAccount
-    name: infar-infra-promtail-c8f1e7ac
+    name: promtail
     namespace: observability
 ---
 apiVersion: apps/v1
@@ -2813,7 +2813,7 @@ metadata:
     app.kubernetes.io/version: 3.5.1
     helm.sh/chart: promtail-6.17.1
     project: infar
-  name: infar-infra-promtail-c8f1e7ac
+  name: promtail
   namespace: observability
 spec:
   selector:
@@ -2823,7 +2823,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/config: faf520d6754860ccdbbd47f6d08fc1e35e0ca45a50a37261b653281407667e8d
+        checksum/config: daea98497bc2f16da6e910b8b308317d6abce2949cf0420fd6ae74586660683f
       labels:
         app.kubernetes.io/instance: infar-infra-promtail-c8f1e7ac
         app.kubernetes.io/name: promtail
@@ -2874,7 +2874,7 @@ spec:
       securityContext:
         runAsGroup: 0
         runAsUser: 0
-      serviceAccountName: infar-infra-promtail-c8f1e7ac
+      serviceAccountName: promtail
       tolerations:
         - effect: NoSchedule
           key: node-role.kubernetes.io/master
@@ -2885,7 +2885,7 @@ spec:
       volumes:
         - name: config
           secret:
-            secretName: infar-infra-promtail-c8f1e7ac
+            secretName: promtail
         - hostPath:
             path: /run/promtail
           name: run
@@ -2906,7 +2906,7 @@ metadata:
     app.kubernetes.io/version: 12.3.1
     helm.sh/chart: grafana-10.5.15
     project: infar
-  name: infar-infra-grafana-c8f1e7ac
+  name: grafana
   namespace: observability
 automountServiceAccountToken: false
 ---
@@ -2920,7 +2920,7 @@ metadata:
     app.kubernetes.io/version: 12.3.1
     helm.sh/chart: grafana-10.5.15
     project: infar
-  name: infar-infra-grafana-c8f1e7ac
+  name: grafana
   namespace: observability
 data:
   admin-password: YWRtaW4=
@@ -2937,7 +2937,7 @@ metadata:
     app.kubernetes.io/version: 12.3.1
     helm.sh/chart: grafana-10.5.15
     project: infar
-  name: infar-infra-grafana-c8f1e7ac
+  name: grafana
   namespace: observability
 data:
   dashboardproviders.yaml: |
@@ -2992,7 +2992,7 @@ metadata:
     app.kubernetes.io/version: 12.3.1
     helm.sh/chart: grafana-10.5.15
     project: infar
-  name: infar-infra-grafana-c8f1e7ac
+  name: grafana
   namespace: observability
 spec:
   accessModes:
@@ -3010,7 +3010,7 @@ metadata:
     app.kubernetes.io/version: 12.3.1
     helm.sh/chart: grafana-10.5.15
     project: infar
-  name: infar-infra-grafana-c8f1e7ac-clusterrole
+  name: grafana-clusterrole
 rules: []
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -3022,14 +3022,14 @@ metadata:
     app.kubernetes.io/version: 12.3.1
     helm.sh/chart: grafana-10.5.15
     project: infar
-  name: infar-infra-grafana-c8f1e7ac-clusterrolebinding
+  name: grafana-clusterrolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: infar-infra-grafana-c8f1e7ac-clusterrole
+  name: grafana-clusterrole
 subjects:
   - kind: ServiceAccount
-    name: infar-infra-grafana-c8f1e7ac
+    name: grafana
     namespace: observability
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -3041,7 +3041,7 @@ metadata:
     app.kubernetes.io/version: 12.3.1
     helm.sh/chart: grafana-10.5.15
     project: infar
-  name: infar-infra-grafana-c8f1e7ac
+  name: grafana
   namespace: observability
 rules: []
 ---
@@ -3054,15 +3054,15 @@ metadata:
     app.kubernetes.io/version: 12.3.1
     helm.sh/chart: grafana-10.5.15
     project: infar
-  name: infar-infra-grafana-c8f1e7ac
+  name: grafana
   namespace: observability
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: infar-infra-grafana-c8f1e7ac
+  name: grafana
 subjects:
   - kind: ServiceAccount
-    name: infar-infra-grafana-c8f1e7ac
+    name: grafana
     namespace: observability
 ---
 apiVersion: v1
@@ -3074,7 +3074,7 @@ metadata:
     app.kubernetes.io/version: 12.3.1
     helm.sh/chart: grafana-10.5.15
     project: infar
-  name: infar-infra-grafana-c8f1e7ac
+  name: grafana
   namespace: observability
 spec:
   ports:
@@ -3096,7 +3096,7 @@ metadata:
     app.kubernetes.io/version: 12.3.1
     helm.sh/chart: grafana-10.5.15
     project: infar
-  name: infar-infra-grafana-c8f1e7ac
+  name: grafana
   namespace: observability
 spec:
   replicas: 1
@@ -3131,12 +3131,12 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: admin-user
-                  name: infar-infra-grafana-c8f1e7ac
+                  name: grafana
             - name: GF_SECURITY_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
                   key: admin-password
-                  name: infar-infra-grafana-c8f1e7ac
+                  name: grafana
             - name: GF_PATHS_DATA
               value: /var/lib/grafana/
             - name: GF_PATHS_LOGS
@@ -3206,18 +3206,18 @@ spec:
         runAsGroup: 472
         runAsNonRoot: true
         runAsUser: 472
-      serviceAccountName: infar-infra-grafana-c8f1e7ac
+      serviceAccountName: grafana
       shareProcessNamespace: false
       volumes:
         - configMap:
-            name: infar-infra-grafana-c8f1e7ac
+            name: grafana
           name: config
         - configMap:
             name: infar-warroom-v2
           name: dashboards-infar
         - name: storage
           persistentVolumeClaim:
-            claimName: infar-infra-grafana-c8f1e7ac
+            claimName: grafana
         - emptyDir: {}
           name: search
 ---
@@ -3230,7 +3230,7 @@ metadata:
     app.kubernetes.io/version: 12.3.1
     helm.sh/chart: grafana-10.5.15
     project: infar
-  name: infar-infra-grafana-c8f1e7ac
+  name: grafana
   namespace: observability
 spec:
   ingressClassName: nginx
@@ -3240,7 +3240,7 @@ spec:
         paths:
           - backend:
               service:
-                name: infar-infra-grafana-c8f1e7ac
+                name: grafana
                 port:
                   number: 80
             path: /
@@ -3298,6 +3298,74 @@ metadata:
   name: infar-warroom-v2
   namespace: observability
 data:
+  infar-k8s-health.json: |2-
+    
+      {
+        "title": "Infar - K8s Health & Logs",
+        "timezone": "browser",
+        "refresh": "10s",
+        "schemaVersion": 30,
+        "templating": {
+          "list": [
+            {
+              "name": "namespace",
+              "type": "query",
+              "datasource": "Prometheus",
+              "query": "label_values(kube_pod_info, namespace)",
+              "includeAll": true,
+              "current": { "text": "All", "value": "$__all" },
+              "refresh": 1
+            },
+            {
+              "name": "pod",
+              "type": "query",
+              "datasource": "Prometheus",
+              "query": "label_values(kube_pod_info{namespace=~\"$namespace\"}, pod)",
+              "includeAll": true,
+              "current": { "text": "All", "value": "$__all" },
+              "refresh": 1
+            }
+          ]
+        },
+        "panels": [
+          {
+            "type": "stat",
+            "title": "Total Running Pods",
+            "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
+            "targets": [{ "expr": "sum(kube_pod_status_phase{namespace=~\"$namespace\", phase=\"Running\"})", "datasource": "Prometheus" }],
+            "options": { "colorMode": "value", "graphMode": "area" }
+          },
+          {
+            "type": "stat",
+            "title": "Pods in Error/CrashLoop",
+            "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
+            "targets": [{ "expr": "sum(kube_pod_status_phase{namespace=~\"$namespace\", phase=~\"Failed|Unknown|Pending\"})", "datasource": "Prometheus" }],
+            "options": { "colorMode": "background", "graphMode": "none" }
+          },
+          {
+            "type": "stat",
+            "title": "Deployment Replicas (Available / Spec)",
+            "gridPos": { "h": 5, "w": 12, "x": 12, "y": 0 },
+            "targets": [
+              { "expr": "sum(kube_deployment_status_replicas_available{namespace=~\"$namespace\"})", "datasource": "Prometheus", "legendFormat": "Available" },
+              { "expr": "sum(kube_deployment_spec_replicas{namespace=~\"$namespace\"})", "datasource": "Prometheus", "legendFormat": "Desired" }
+            ]
+          },
+          {
+            "type": "timeseries",
+            "title": "Container Restarts (Rate)",
+            "gridPos": { "h": 7, "w": 12, "x": 0, "y": 5 },
+            "targets": [{ "expr": "sum by (pod) (rate(kube_pod_container_status_restarts_total{namespace=~\"$namespace\"}[5m])) > 0", "legendFormat": "{{pod}}", "datasource": "Prometheus" }]
+          },
+          {
+            "type": "logs",
+            "title": "Live Application Logs (Loki)",
+            "gridPos": { "h": 12, "w": 24, "x": 0, "y": 12 },
+            "targets": [{ "expr": "{namespace=~\"$namespace\", pod=~\"$pod\"}", "datasource": "Loki" }],
+            "options": { "showTime": true, "showLabels": true, "wrapLogMessage": true }
+          }
+        ]
+      }
   infar-overview.json: |-
     
     {
@@ -3306,95 +3374,95 @@ data:
       "refresh": "5s",
       "schemaVersion": 30,
       "panels": [
-    	{
-    	  "type": "stat",
-    	  "title": "Infra Active Connections",
-    	  "gridPos": { "h": 5, "w": 8, "x": 0, "y": 0 },
-    	  "targets": [
-    		{
-    		  "expr": "sum(tcp_open_total{namespace=\"infra\"}) - sum(tcp_close_total{namespace=\"infra\"})",
-    		  "legendFormat": "Active Connections",
-    		  "datasource": "Linkerd-Prometheus"
-    		}
-    	  ],
-    	  "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"], "values": false } }
-    	},
-    	{
-    	  "type": "stat",
-    	  "title": "TCP Connection Rate (ops/s)",
-    	  "gridPos": { "h": 5, "w": 8, "x": 8, "y": 0 },
-    	  "targets": [
-    		{
-    		  "expr": "sum(rate(tcp_open_total{namespace=\"infra\"}[1m]))",
-    		  "legendFormat": "Conn Rate",
-    		  "datasource": "Linkerd-Prometheus"
-    		}
-    	  ],
-    	  "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"], "values": false } }
-    	},
-    	{
-    	  "type": "stat",
-    	  "title": "Network Throughput (Total)",
-    	  "gridPos": { "h": 5, "w": 8, "x": 16, "y": 0 },
-    	  "targets": [
-    		{
-    		  "expr": "sum(rate(tcp_read_bytes_total{namespace=\"infra\"}[1m])) + sum(rate(tcp_write_bytes_total{namespace=\"infra\"}[1m]))",
-    		  "legendFormat": "Throughput",
-    		  "datasource": "Linkerd-Prometheus"
-    		}
-    	  ],
-    	  "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"], "values": false } }
-    	},
-    	{
-    	  "type": "timeseries",
-    	  "title": "TCP Open Rate by Pod",
-    	  "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
-    	  "targets": [
-    		{
-    		  "expr": "sum by (pod) (rate(tcp_open_total{namespace=\"infra\"}[1m]))",
-    		  "legendFormat": "{{pod}}",
-    		  "datasource": "Linkerd-Prometheus"
-    		}
-    	  ]
-    	},
-    	{
-    	  "type": "timeseries",
-    	  "title": "Throughput by Pod (Read)",
-    	  "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
-    	  "targets": [
-    		{
-    		  "expr": "sum by (pod) (rate(tcp_read_bytes_total{namespace=\"infra\"}[1m]))",
-    		  "legendFormat": "{{pod}}",
-    		  "datasource": "Linkerd-Prometheus"
-    		}
-    	  ]
-    	},
-    	{
-    	  "type": "timeseries",
-    	  "title": "TCP Connections by Pod",
-    	  "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
-    	  "targets": [
-    		{
-    		  "expr": "sum by (pod) (rate(tcp_open_total{namespace=\"infra\"}[1m]))",
-    		  "legendFormat": "{{pod}}",
-    		  "datasource": "Linkerd-Prometheus"
-    		}
-    	  ]
-    	},
-    	{
-    	  "type": "timeseries",
-    	  "title": "Network Throughput",
-    	  "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
-    	  "targets": [
-    		{
-    		  "expr": "sum by (pod) (rate(tcp_read_bytes_total{namespace=\"infra\"}[1m]))",
-    		  "legendFormat": "{{pod}} - Read",
-    		  "datasource": "Linkerd-Prometheus"
-    		}
-    	  ]
-    	}
-      ]
-    }
+      {
+        "type": "stat",
+        "title": "Infra Active Connections",
+        "gridPos": { "h": 5, "w": 8, "x": 0, "y": 0 },
+        "targets": [
+        {
+          "expr": "sum(tcp_open_total{namespace=\"infra\"}) - sum(tcp_close_total{namespace=\"infra\"})",
+          "legendFormat": "Active Connections",
+          "datasource": "Linkerd-Prometheus"
+        }
+        ],
+        "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"], "values": false } }
+      },
+      {
+        "type": "stat",
+        "title": "TCP Connection Rate (ops/s)",
+        "gridPos": { "h": 5, "w": 8, "x": 8, "y": 0 },
+        "targets": [
+        {
+          "expr": "sum(rate(tcp_open_total{namespace=\"infra\"}[1m]))",
+          "legendFormat": "Conn Rate",
+          "datasource": "Linkerd-Prometheus"
+        }
+        ],
+        "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"], "values": false } }
+      },
+      {
+        "type": "stat",
+        "title": "Network Throughput (Total)",
+        "gridPos": { "h": 5, "w": 8, "x": 16, "y": 0 },
+        "targets": [
+        {
+          "expr": "sum(rate(tcp_read_bytes_total{namespace=\"infra\"}[1m])) + sum(rate(tcp_write_bytes_total{namespace=\"infra\"}[1m]))",
+          "legendFormat": "Throughput",
+          "datasource": "Linkerd-Prometheus"
+        }
+        ],
+        "options": { "colorMode": "value", "graphMode": "area", "reduceOptions": { "calcs": ["lastNotNull"], "values": false } }
+      },
+      {
+        "type": "timeseries",
+        "title": "TCP Open Rate by Pod",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 5 },
+        "targets": [
+        {
+          "expr": "sum by (pod) (rate(tcp_open_total{namespace=\"infra\"}[1m]))",
+          "legendFormat": "{{pod}}",
+          "datasource": "Linkerd-Prometheus"
+        }
+        ]
+      },
+      {
+        "type": "timeseries",
+        "title": "Throughput by Pod (Read)",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 5 },
+        "targets": [
+        {
+          "expr": "sum by (pod) (rate(tcp_read_bytes_total{namespace=\"infra\"}[1m]))",
+          "legendFormat": "{{pod}}",
+          "datasource": "Linkerd-Prometheus"
+        }
+        ]
+      },
+      {
+        "type": "timeseries",
+        "title": "TCP Connections by Pod",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 13 },
+        "targets": [
+        {
+          "expr": "sum by (pod) (rate(tcp_open_total{namespace=\"infra\"}[1m]))",
+          "legendFormat": "{{pod}}",
+          "datasource": "Linkerd-Prometheus"
+        }
+        ]
+      },
+      {
+        "type": "timeseries",
+        "title": "Network Throughput",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 13 },
+        "targets": [
+        {
+          "expr": "sum by (pod) (rate(tcp_read_bytes_total{namespace=\"infra\"}[1m]))",
+          "legendFormat": "{{pod}} - Read",
+          "datasource": "Linkerd-Prometheus"
+        }
+        ]
+      }
+        ]
+      }
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -3456,7 +3524,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-repo-server
+  name: argocd-repo-server
   namespace: argocd
 automountServiceAccountToken: true
 ---
@@ -3523,8 +3591,8 @@ metadata:
   name: argocd-secret
   namespace: argocd
 data:
-  admin.password: JDJhJDEwJEhIVktodTBxdHUxSXZ6QlNkTnI2aE9MUGNsLnlDM0h0U1BBelVML3BiUDFqcHE0aENnbDFT
-  admin.passwordMtime: MjAyNi0wNC0wMlQxNjoxNDo0MVo=
+  admin.password: JDJhJDEwJE9xU3cyczBsdEQuQ1NzcHpCaG1Xb3V5b0lYOG1ueFhYeTlPLjFPSmFUNWx4NHp4ZkMwL002
+  admin.passwordMtime: MjAyNi0wNC0wMlQxNjo1MjoyN1o=
 type: Opaque
 ---
 apiVersion: v1
@@ -3671,11 +3739,11 @@ data:
   dexserver.log.level: info
   notificationscontroller.log.format: text
   notificationscontroller.log.level: info
-  redis.server: infar-infra-argocd-c8f1e7ac-redis:6379
-  repo.server: infar-infra-argocd-c8f1e7ac-repo-server:8081
+  redis.server: argocd-redis:6379
+  repo.server: argocd-repo-server:8081
   reposerver.log.format: text
   reposerver.log.level: info
-  server.dex.server: https://infar-infra-argocd-c8f1e7ac-dex-server:5556
+  server.dex.server: https://argocd-dex-server:5556
   server.dex.server.strict.tls: "false"
   server.log.format: text
   server.log.level: info
@@ -3789,7 +3857,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-redis-health-configmap
+  name: argocd-redis-health-configmap
   namespace: argocd
 data:
   redis_liveness.sh: |
@@ -33121,7 +33189,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-application-controller
+  name: argocd-application-controller
 rules:
   - apiGroups:
       - "*"
@@ -33146,7 +33214,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-notifications-controller
+  name: argocd-notifications-controller
 rules:
   - apiGroups:
       - argoproj.io
@@ -33196,7 +33264,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-server
+  name: argocd-server
 rules:
   - apiGroups:
       - "*"
@@ -33255,11 +33323,11 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-application-controller
+  name: argocd-application-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: infar-infra-argocd-c8f1e7ac-application-controller
+  name: argocd-application-controller
 subjects:
   - kind: ServiceAccount
     name: argocd-application-controller
@@ -33277,11 +33345,11 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-notifications-controller
+  name: argocd-notifications-controller
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: infar-infra-argocd-c8f1e7ac-notifications-controller
+  name: argocd-notifications-controller
 subjects:
   - kind: ServiceAccount
     name: argocd-notifications-controller
@@ -33299,11 +33367,11 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-server
+  name: argocd-server
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: infar-infra-argocd-c8f1e7ac-server
+  name: argocd-server
 subjects:
   - kind: ServiceAccount
     name: argocd-server
@@ -33321,7 +33389,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-application-controller
+  name: argocd-application-controller
   namespace: argocd
 rules:
   - apiGroups:
@@ -33375,7 +33443,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-applicationset-controller
+  name: argocd-applicationset-controller
   namespace: argocd
 rules:
   - apiGroups:
@@ -33476,7 +33544,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-notifications-controller
+  name: argocd-notifications-controller
   namespace: argocd
 rules:
   - apiGroups:
@@ -33527,7 +33595,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-repo-server
+  name: argocd-repo-server
   namespace: argocd
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -33542,7 +33610,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-server
+  name: argocd-server
   namespace: argocd
 rules:
   - apiGroups:
@@ -33592,7 +33660,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-dex-server
+  name: argocd-dex-server
   namespace: argocd
 rules:
   - apiGroups:
@@ -33617,12 +33685,12 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-application-controller
+  name: argocd-application-controller
   namespace: argocd
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: infar-infra-argocd-c8f1e7ac-application-controller
+  name: argocd-application-controller
 subjects:
   - kind: ServiceAccount
     name: argocd-application-controller
@@ -33640,12 +33708,12 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-applicationset-controller
+  name: argocd-applicationset-controller
   namespace: argocd
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: infar-infra-argocd-c8f1e7ac-applicationset-controller
+  name: argocd-applicationset-controller
 subjects:
   - kind: ServiceAccount
     name: argocd-applicationset-controller
@@ -33663,12 +33731,12 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-notifications-controller
+  name: argocd-notifications-controller
   namespace: argocd
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: infar-infra-argocd-c8f1e7ac-notifications-controller
+  name: argocd-notifications-controller
 subjects:
   - kind: ServiceAccount
     name: argocd-notifications-controller
@@ -33686,15 +33754,15 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-repo-server
+  name: argocd-repo-server
   namespace: argocd
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: infar-infra-argocd-c8f1e7ac-repo-server
+  name: argocd-repo-server
 subjects:
   - kind: ServiceAccount
-    name: infar-infra-argocd-c8f1e7ac-repo-server
+    name: argocd-repo-server
     namespace: argocd
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -33709,12 +33777,12 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-server
+  name: argocd-server
   namespace: argocd
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: infar-infra-argocd-c8f1e7ac-server
+  name: argocd-server
 subjects:
   - kind: ServiceAccount
     name: argocd-server
@@ -33732,12 +33800,12 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-dex-server
+  name: argocd-dex-server
   namespace: argocd
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: infar-infra-argocd-c8f1e7ac-dex-server
+  name: argocd-dex-server
 subjects:
   - kind: ServiceAccount
     name: argocd-dex-server
@@ -33755,7 +33823,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-applicationset-controller
+  name: argocd-applicationset-controller
   namespace: argocd
 spec:
   ports:
@@ -33779,7 +33847,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-repo-server
+  name: argocd-repo-server
   namespace: argocd
 spec:
   ports:
@@ -33803,7 +33871,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-server
+  name: argocd-server
   namespace: argocd
 spec:
   externalTrafficPolicy: Cluster
@@ -33836,7 +33904,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-dex-server
+  name: argocd-dex-server
   namespace: argocd
 spec:
   ports:
@@ -33864,7 +33932,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-redis
+  name: argocd-redis
   namespace: argocd
 spec:
   ports:
@@ -33887,7 +33955,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-applicationset-controller
+  name: argocd-applicationset-controller
   namespace: argocd
 spec:
   replicas: 1
@@ -33899,7 +33967,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: 47a14ed29b669cd46113b7606666f717e71a5f32c85912a0a2e81b8304cdb965
+        checksum/cmd-params: 9b46368d306374cd2310118a0f0c5026e3075056ecc222764ba030031e4e55c9
       labels:
         app.kubernetes.io/component: applicationset-controller
         app.kubernetes.io/instance: infar-infra-argocd-c8f1e7ac
@@ -34180,7 +34248,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-notifications-controller
+  name: argocd-notifications-controller
   namespace: argocd
 spec:
   replicas: 1
@@ -34194,7 +34262,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: 47a14ed29b669cd46113b7606666f717e71a5f32c85912a0a2e81b8304cdb965
+        checksum/cmd-params: 9b46368d306374cd2310118a0f0c5026e3075056ecc222764ba030031e4e55c9
       labels:
         app.kubernetes.io/component: notifications-controller
         app.kubernetes.io/instance: infar-infra-argocd-c8f1e7ac
@@ -34219,7 +34287,7 @@ spec:
             - /usr/local/bin/argocd-notifications
             - --metrics-port=9001
             - --namespace=argocd
-            - --argocd-repo-server=infar-infra-argocd-c8f1e7ac-repo-server:8081
+            - --argocd-repo-server=argocd-repo-server:8081
             - --secret-name=argocd-notifications-secret
           env:
             - name: ARGOCD_NOTIFICATIONS_CONTROLLER_LOGLEVEL
@@ -34314,7 +34382,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-repo-server
+  name: argocd-repo-server
   namespace: argocd
 spec:
   replicas: 1
@@ -34327,7 +34395,7 @@ spec:
     metadata:
       annotations:
         checksum/cm: 2d74a28e8101c6c3264b3f12a3bfbf151900712a8730be8cbc473045590f3aa8
-        checksum/cmd-params: 47a14ed29b669cd46113b7606666f717e71a5f32c85912a0a2e81b8304cdb965
+        checksum/cmd-params: 9b46368d306374cd2310118a0f0c5026e3075056ecc222764ba030031e4e55c9
       labels:
         app.kubernetes.io/component: repo-server
         app.kubernetes.io/instance: infar-infra-argocd-c8f1e7ac
@@ -34354,7 +34422,7 @@ spec:
             - --metrics-port=8084
           env:
             - name: ARGOCD_REPO_SERVER_NAME
-              value: infar-infra-argocd-c8f1e7ac-repo-server
+              value: argocd-repo-server
             - name: ARGOCD_RECONCILIATION_TIMEOUT
               valueFrom:
                 configMapKeyRef:
@@ -34461,13 +34529,13 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: redis-sentinel-username
-                  name: infar-infra-argocd-c8f1e7ac-redis
+                  name: argocd-redis
                   optional: true
             - name: REDIS_SENTINEL_PASSWORD
               valueFrom:
                 secretKeyRef:
                   key: redis-sentinel-password
-                  name: infar-infra-argocd-c8f1e7ac-redis
+                  name: argocd-redis
                   optional: true
             - name: ARGOCD_DEFAULT_CACHE_EXPIRATION
               valueFrom:
@@ -34693,7 +34761,7 @@ spec:
               name: var-files
       nodeSelector:
         kubernetes.io/os: linux
-      serviceAccountName: infar-infra-argocd-c8f1e7ac-repo-server
+      serviceAccountName: argocd-repo-server
       terminationGracePeriodSeconds: 30
       volumes:
         - emptyDir: {}
@@ -34739,7 +34807,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-server
+  name: argocd-server
   namespace: argocd
 spec:
   replicas: 1
@@ -34752,7 +34820,7 @@ spec:
     metadata:
       annotations:
         checksum/cm: 2d74a28e8101c6c3264b3f12a3bfbf151900712a8730be8cbc473045590f3aa8
-        checksum/cmd-params: 47a14ed29b669cd46113b7606666f717e71a5f32c85912a0a2e81b8304cdb965
+        checksum/cmd-params: 9b46368d306374cd2310118a0f0c5026e3075056ecc222764ba030031e4e55c9
       labels:
         app.kubernetes.io/component: server
         app.kubernetes.io/instance: infar-infra-argocd-c8f1e7ac
@@ -34780,7 +34848,7 @@ spec:
             - --insecure
           env:
             - name: ARGOCD_SERVER_NAME
-              value: infar-infra-argocd-c8f1e7ac-server
+              value: argocd-server
             - name: ARGOCD_SERVER_INSECURE
               valueFrom:
                 configMapKeyRef:
@@ -34953,13 +35021,13 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: redis-sentinel-username
-                  name: infar-infra-argocd-c8f1e7ac-redis
+                  name: argocd-redis
                   optional: true
             - name: REDIS_SENTINEL_PASSWORD
               valueFrom:
                 secretKeyRef:
                   key: redis-sentinel-password
-                  name: infar-infra-argocd-c8f1e7ac-redis
+                  name: argocd-redis
                   optional: true
             - name: ARGOCD_DEFAULT_CACHE_EXPIRATION
               valueFrom:
@@ -35202,7 +35270,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-dex-server
+  name: argocd-dex-server
   namespace: argocd
 spec:
   replicas: 1
@@ -35214,7 +35282,7 @@ spec:
   template:
     metadata:
       annotations:
-        checksum/cmd-params: 47a14ed29b669cd46113b7606666f717e71a5f32c85912a0a2e81b8304cdb965
+        checksum/cmd-params: 9b46368d306374cd2310118a0f0c5026e3075056ecc222764ba030031e4e55c9
       labels:
         app.kubernetes.io/component: dex-server
         app.kubernetes.io/instance: infar-infra-argocd-c8f1e7ac
@@ -35354,7 +35422,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-redis
+  name: argocd-redis
   namespace: argocd
 spec:
   replicas: 1
@@ -35426,7 +35494,7 @@ spec:
       volumes:
         - configMap:
             defaultMode: 493
-            name: infar-infra-argocd-c8f1e7ac-redis-health-configmap
+            name: argocd-redis-health-configmap
           name: health
 ---
 apiVersion: apps/v1
@@ -35441,7 +35509,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-application-controller
+  name: argocd-application-controller
   namespace: argocd
 spec:
   replicas: 1
@@ -35450,12 +35518,12 @@ spec:
     matchLabels:
       app.kubernetes.io/instance: infar-infra-argocd-c8f1e7ac
       app.kubernetes.io/name: argocd-application-controller
-  serviceName: infar-infra-argocd-c8f1e7ac-application-controller
+  serviceName: argocd-application-controller
   template:
     metadata:
       annotations:
         checksum/cm: 2d74a28e8101c6c3264b3f12a3bfbf151900712a8730be8cbc473045590f3aa8
-        checksum/cmd-params: 47a14ed29b669cd46113b7606666f717e71a5f32c85912a0a2e81b8304cdb965
+        checksum/cmd-params: 9b46368d306374cd2310118a0f0c5026e3075056ecc222764ba030031e4e55c9
       labels:
         app.kubernetes.io/component: application-controller
         app.kubernetes.io/instance: infar-infra-argocd-c8f1e7ac
@@ -35483,7 +35551,7 @@ spec:
             - name: ARGOCD_CONTROLLER_REPLICAS
               value: "1"
             - name: ARGOCD_APPLICATION_CONTROLLER_NAME
-              value: infar-infra-argocd-c8f1e7ac-application-controller
+              value: argocd-application-controller
             - name: ARGOCD_RECONCILIATION_TIMEOUT
               valueFrom:
                 configMapKeyRef:
@@ -35656,13 +35724,13 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: redis-sentinel-username
-                  name: infar-infra-argocd-c8f1e7ac-redis
+                  name: argocd-redis
                   optional: true
             - name: REDIS_SENTINEL_PASSWORD
               valueFrom:
                 secretKeyRef:
                   key: redis-sentinel-password
-                  name: infar-infra-argocd-c8f1e7ac-redis
+                  name: argocd-redis
                   optional: true
             - name: ARGOCD_DEFAULT_CACHE_EXPIRATION
               valueFrom:
@@ -35841,7 +35909,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-server
+  name: argocd-server
   namespace: argocd
 spec:
   ingressClassName: nginx
@@ -35851,7 +35919,7 @@ spec:
         paths:
           - backend:
               service:
-                name: infar-infra-argocd-c8f1e7ac-server
+                name: argocd-server
                 port:
                   number: 443
             path: /
@@ -35872,7 +35940,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-redis-secret-init
+  name: argocd-redis-secret-init
   namespace: argocd
 automountServiceAccountToken: true
 ---
@@ -35891,7 +35959,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-redis-secret-init
+  name: argocd-redis-secret-init
   namespace: argocd
 rules:
   - apiGroups:
@@ -35924,15 +35992,15 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-redis-secret-init
+  name: argocd-redis-secret-init
   namespace: argocd
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: infar-infra-argocd-c8f1e7ac-redis-secret-init
+  name: argocd-redis-secret-init
 subjects:
   - kind: ServiceAccount
-    name: infar-infra-argocd-c8f1e7ac-redis-secret-init
+    name: argocd-redis-secret-init
 ---
 apiVersion: batch/v1
 kind: Job
@@ -35949,7 +36017,7 @@ metadata:
     app.kubernetes.io/version: v3.3.6
     helm.sh/chart: argo-cd-9.4.17
     project: infar
-  name: infar-infra-argocd-c8f1e7ac-redis-secret-init
+  name: argocd-redis-secret-init
   namespace: argocd
 spec:
   template:
@@ -35993,5 +36061,5 @@ spec:
       nodeSelector:
         kubernetes.io/os: linux
       restartPolicy: OnFailure
-      serviceAccountName: infar-infra-argocd-c8f1e7ac-redis-secret-init
+      serviceAccountName: argocd-redis-secret-init
   ttlSecondsAfterFinished: 60

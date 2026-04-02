@@ -55,6 +55,9 @@ echo "------------------------------------------------"
 PG_PASS=$(kubectl get secret infra-secrets -n infra -o jsonpath="{.data.postgresql-password}" 2>/dev/null | base64 --decode)
 REDIS_PASS=$(kubectl get secret infra-secrets -n infra -o jsonpath="{.data.redis-password}" 2>/dev/null | base64 --decode)
 
+# 取得動態的 Postgres Service 名稱
+PG_SVC=$(kubectl get svc -n infra -l app.kubernetes.io/name=postgresql -o jsonpath='{.items[0].metadata.name}')
+
 count=0
 while true; do
   count=$((count+1))
@@ -65,8 +68,8 @@ while true; do
   # 2. Redis 流量：真實的 PING
   kubectl exec -n infra "$GEN_POD" -c generator -- redis-cli -h redis-master -p 6379 -a "$REDIS_PASS" PING > /dev/null 2>&1
   
-  # 3. Postgres 流量：真實的連線探測
-  kubectl exec -n infra "$GEN_POD" -c generator -- env PGPASSWORD="$PG_PASS" pg_isready -h infar-infra-postgres-c8f1e7ac-postgresql -p 5432 -U admin > /dev/null 2>&1
+  # 3. Postgres 流量：動態抓取連線探測
+  kubectl exec -n infra "$GEN_POD" -c generator -- env PGPASSWORD="$PG_PASS" pg_isready -h "$PG_SVC" -p 5432 -U admin > /dev/null 2>&1
   
   # 4. 製造 HTTP 錯誤：請求不存在的 Flink 頁面 (讓 Grafana 顯示 404 錯誤率)
   if [ $((count % 5)) -eq 0 ]; then
