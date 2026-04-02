@@ -50,7 +50,7 @@ helm repo update > /dev/null
 echo "5. 同步基礎設施狀態 (Declarative Apply)..."
 # 使用 Server-Side Apply 確保幂等性與大型 CRD 相容
 # 此處依賴 Go 代碼中已關閉 Test Hooks，因此不會再產生幽靈 Pod
-kubectl apply --server-side --force-conflicts -f dist/infar-infra.k8s.yaml
+kubectl apply --server-side --force-conflicts -f dist/
 
 # ==========================================
 # 6. 後續自動化設定

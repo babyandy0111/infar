@@ -19,32 +19,17 @@ import (
 	"infar-infra/pkg/streaming"
 )
 
-func NewInfarInfra(scope constructs.Construct, id string, props *cdk8s.ChartProps) cdk8s.Chart {
+func NewInfarDatastore(scope constructs.Construct, id string, props *cdk8s.ChartProps) cdk8s.Chart {
 	chart := cdk8s.NewChart(scope, jsii.String(id), props)
-
-	// 1. 讀取環境變數
 	_ = godotenv.Load(".env")
 	dbPass := os.Getenv("DB_PASSWORD")
 	redisPass := os.Getenv("REDIS_PASSWORD")
-	argocdPass := os.Getenv("ARGOCD_ADMIN_PASSWORD") // 將被 bcrypt 加密
 
 	if dbPass == "" || redisPass == "" {
 		log.Fatal("錯誤：.env 中缺少必須的資料庫密碼設定 (DB_PASSWORD 或 REDIS_PASSWORD)！")
 	}
 
-	// 2. 定義基礎命名空間與注入標籤
-	namespaces := []string{"infra", "argocd", "observability"}
-	for _, ns := range namespaces {
-		labels := map[string]*string{"project": jsii.String("infar")}
-		if ns == "infra" {
-			labels["linkerd.io/inject"] = jsii.String("enabled")
-		}
-		k8s.NewKubeNamespace(chart, jsii.String(ns+"-ns"), &k8s.KubeNamespaceProps{
-			Metadata: &k8s.ObjectMeta{Name: jsii.String(ns), Labels: &labels},
-		})
-	}
-
-	// 3. 建立 K8s Secret (安全管理密碼)
+	// 建立 K8s Secret (安全管理密碼)
 	k8s.NewKubeSecret(chart, jsii.String("infra-secrets"), &k8s.KubeSecretProps{
 		Metadata: &k8s.ObjectMeta{
 			Name:      jsii.String("infra-secrets"),
@@ -56,36 +41,46 @@ func NewInfarInfra(scope constructs.Construct, id string, props *cdk8s.ChartProp
 		},
 	})
 
-	// ==========================================
-	// 呼叫模組建立資源
-	// ==========================================
-
-	// DataStore (PostgreSQL, Redis)
 	datastore.CreatePostgreSQL(chart)
 	datastore.CreateRedis(chart)
+	return chart
+}
 
-	// Streaming (Kafka, Zookeeper, Flink)
+func NewInfarStreaming(scope constructs.Construct, id string, props *cdk8s.ChartProps) cdk8s.Chart {
+	chart := cdk8s.NewChart(scope, jsii.String(id), props)
 	streaming.CreateKafkaAndZookeeper(chart)
 	streaming.CreateFlink(chart)
+	return chart
+}
 
-	// Observability (PLG, Prometheus, Linkerd Auth, Dashboards)
+func NewInfarObservability(scope constructs.Construct, id string, props *cdk8s.ChartProps) cdk8s.Chart {
+	chart := cdk8s.NewChart(scope, jsii.String(id), props)
 	observability.CreateMonitoring(chart)
 	observability.CreateDashboards(chart)
+	return chart
+}
 
-	// CI/CD (ArgoCD)
+func NewInfarCicd(scope constructs.Construct, id string, props *cdk8s.ChartProps) cdk8s.Chart {
+	chart := cdk8s.NewChart(scope, jsii.String(id), props)
+	_ = godotenv.Load(".env")
+	argocdPass := os.Getenv("ARGOCD_ADMIN_PASSWORD")
 	cicd.CreateArgoCD(chart, argocdPass)
-
 	return chart
 }
 
 func main() {
 	app := cdk8s.NewApp(nil)
-	fmt.Println("🚀 正在根據環境變數產生 Infar K8s 設定檔 (cdk8s)...")
+	fmt.Println("🚀 正在根據環境變數產生 Infar K8s 設定檔 (多檔模式)...")
 
-	NewInfarInfra(app, "infar-infra", &cdk8s.ChartProps{
+	commonProps := &cdk8s.ChartProps{
 		Labels: &map[string]*string{"project": jsii.String("infar")},
-	})
+	}
+
+	NewInfarDatastore(app, "01-datastore", commonProps)
+	NewInfarStreaming(app, "02-streaming", commonProps)
+	NewInfarObservability(app, "03-observability", commonProps)
+	NewInfarCicd(app, "04-cicd", commonProps)
 
 	app.Synth()
-	fmt.Println("✅ 設定檔產生完成！請至 dist/ 目錄查看。")
+	fmt.Println("✅ 設定檔產生完成！請至 dist/ 目錄查看分類的 YAML 檔案。")
 }
