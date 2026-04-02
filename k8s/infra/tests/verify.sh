@@ -11,6 +11,8 @@ SERVICES=(
     "redis:infra"
     "zookeeper:infra"
     "kafka:infra"
+    "flink-jobmanager:infra"
+    "flink-taskmanager:infra"
     "argocd-server:argocd"
     "loki:observability"
     "grafana:observability"
@@ -26,9 +28,10 @@ check_ready() {
     local ns=$2
     printf "   - 檢查 %-15s 在 %-13s namespace: " "$label" "$ns"
     
-    # 嘗試兩種常見的 K8s 標籤命名慣例
+    # 嘗試三種常見的 K8s 標籤命名慣例 (包含 Flink 的 component)
     if kubectl wait --for=condition=Ready pod -l "app.kubernetes.io/name=$label" -n "$ns" --timeout=15s &> /dev/null || \
-       kubectl wait --for=condition=Ready pod -l "app=$label" -n "$ns" --timeout=15s &> /dev/null; then
+       kubectl wait --for=condition=Ready pod -l "app=$label" -n "$ns" --timeout=15s &> /dev/null || \
+       kubectl wait --for=condition=Ready pod -l "component=${label#*-}" -n "$ns" --timeout=15s &> /dev/null; then
         echo "✅ PASS"
     else
         echo "⏳ 仍在初始化或超時"
@@ -123,12 +126,23 @@ else
     echo "❌ FAIL (狀態碼: $HTTP_STATUS)"
 fi
 
+# 測試 Flink Ingress
+printf "   - 測試 flink.local:           "
+HTTP_STATUS=$(curl -s --max-time 5 -o /dev/null -w "%{http_code}" --resolve "flink.local:80:$TARGET_IP" http://flink.local)
+# Flink 的 UI 預設回傳 200
+if [ "$HTTP_STATUS" == "200" ]; then
+    echo "✅ PASS (狀態碼: $HTTP_STATUS)"
+else
+    echo "❌ FAIL (狀態碼: $HTTP_STATUS)"
+fi
+
 echo "-------------------------------------------------------"
 echo "🌐 基礎設施網址概況:"
 echo "ArgoCD URL:   http://argocd.local"
 echo "Grafana URL:  http://grafana.local"
+echo "Flink UI:     http://flink.local"
 echo "-------------------------------------------------------"
 echo "💡 提示 1: ArgoCD 登入帳號為 admin, 密碼為 admin123"
 echo "💡 提示 2: Grafana 登入帳號為 admin, 密碼為 admin"
 echo "💡 提示 3: 請確保您已將以下內容加入本機的 /etc/hosts :"
-echo "          $TARGET_IP argocd.local grafana.local"
+echo "          $TARGET_IP argocd.local grafana.local flink.local"

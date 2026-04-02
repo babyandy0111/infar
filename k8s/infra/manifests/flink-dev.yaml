@@ -89,7 +89,7 @@ spec:
           args: ["taskmanager"]
           env:
             - name: JOB_MANAGER_RPC_ADDRESS
-              value: flink-jobmanager
+              value: flink-jobmanager.infra.svc.cluster.local
           resources:
             requests:
               memory: "1Gi"
