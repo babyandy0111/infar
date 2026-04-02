@@ -30,28 +30,29 @@ fi
 echo "✅ Linkerd 已移除。"
 
 # ==========================================
-# 3. 移除所有 Helm 部署的服務
+# 3. 移除 cdk8s 產生的基礎設施
 # ==========================================
-echo "3. 移除 Helm 釋放資源 (PostgreSQL, ArgoCD, PLG, Prometheus)..."
-helm uninstall postgresql -n infra 2>/dev/null
-helm uninstall argocd -n argocd 2>/dev/null
-helm uninstall loki -n observability 2>/dev/null
-helm uninstall promtail -n observability 2>/dev/null
-helm uninstall grafana -n observability 2>/dev/null
-helm uninstall prometheus -n observability 2>/dev/null
-echo "✅ Helm 資源已卸載。"
+echo "3. 移除 cdk8s 產出的基礎設施資源 (包含 Helm 轉換的資源)..."
+if [ -f "dist/infar-infra.k8s.yaml" ]; then
+    kubectl delete -f dist/infar-infra.k8s.yaml --ignore-not-found
+else
+    echo "⚠️ 找不到 dist/infar-infra.k8s.yaml，跳過基於檔案的刪除。"
+    # 如果找不到檔案，我們 fallback 到刪除整個 Namespace，這樣最乾淨
+    kubectl delete namespace infra argocd observability --ignore-not-found
+fi
+echo "✅ cdk8s 資源已卸載。"
 
 # ==========================================
-# 4. 移除手刻的 YAML 資源 (Redis, Kafka, Flink, Dashboard)
+# 4. (選用) 移除舊版原生 YAML 資源 (如果有的話)
 # ==========================================
-echo "4. 移除原生 YAML 資源 (Redis, Kafka, Flink)..."
-kubectl delete -f manifests/redis-stack.yaml --ignore-not-found
-kubectl delete -f manifests/kafka-dev.yaml --ignore-not-found
-kubectl delete -f manifests/flink-dev.yaml --ignore-not-found
-kubectl delete -f manifests/flink-ingress.yaml --ignore-not-found
-kubectl delete -f manifests/infar-dashboard.yaml --ignore-not-found
-kubectl delete -f manifests/linkerd-viz-auth.yaml --ignore-not-found
-echo "✅ 原生資源已移除。"
+echo "4. 檢查並移除舊版原生 YAML 資源..."
+kubectl delete -f manifests/redis-stack.yaml --ignore-not-found 2>/dev/null
+kubectl delete -f manifests/kafka-dev.yaml --ignore-not-found 2>/dev/null
+kubectl delete -f manifests/flink-dev.yaml --ignore-not-found 2>/dev/null
+kubectl delete -f manifests/flink-ingress.yaml --ignore-not-found 2>/dev/null
+kubectl delete -f manifests/infar-dashboard.yaml --ignore-not-found 2>/dev/null
+kubectl delete -f manifests/linkerd-viz-auth.yaml --ignore-not-found 2>/dev/null
+echo "✅ 舊版資源已清理。"
 
 # ==========================================
 # 5. 清理 Namespace 與 Secrets
