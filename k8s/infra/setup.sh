@@ -96,6 +96,9 @@ if ! kubectl get namespace linkerd &> /dev/null; then
     echo "   - 安裝 Linkerd Viz 視覺化擴展..."
     linkerd viz install | kubectl apply -f -
     
+    echo "   - 套用 Grafana 存取授權 (解決 403 錯誤)..."
+    kubectl apply -f manifests/linkerd-viz-auth.yaml
+    
     # 等待控制平面就緒
     linkerd check --wait 5m
 else
