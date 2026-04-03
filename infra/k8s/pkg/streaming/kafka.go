@@ -1,14 +1,39 @@
 package streaming
 
 import (
-	"infar-infra/imports/k8s"
+	"os"
 
 	"github.com/aws/jsii-runtime-go"
 	"github.com/cdk8s-team/cdk8s-core-go/cdk8s/v2"
+	"infar-infra/imports/k8s"
 )
 
 func CreateKafkaAndZookeeper(chart cdk8s.Chart) {
-	// Zookeeper StatefulSet (解決 Cluster ID 不持久化問題)
+	env := os.Getenv("INFAR_CLOUD_PROVIDER")
+
+	// 1. 雲端環境邏輯：對接外部 Kafka (如 Amazon MSK)
+	if env != "" && env != "local" {
+		endpoint := os.Getenv("KAFKA_ENDPOINT")
+		if endpoint == "" {
+			endpoint = "msk-kafka.internal.aws"
+		}
+
+		k8s.NewKubeService(chart, jsii.String("kafka-cloud-svc"), &k8s.KubeServiceProps{
+			Metadata: &k8s.ObjectMeta{
+				Name:      jsii.String("kafka-service"),
+				Namespace: jsii.String("infra"),
+			},
+			Spec: &k8s.ServiceSpec{
+				Type:         jsii.String("ExternalName"),
+				ExternalName: jsii.String(endpoint),
+			},
+		})
+		// 雲端環境通常不需要 Zookeeper (MSK 已包含)
+		return
+	}
+
+	// 2. 本機環境邏輯：部署 K8s 內部 Kafka & Zookeeper
+	// Zookeeper StatefulSet
 	zkLabel := map[string]*string{"app": jsii.String("zookeeper")}
 	k8s.NewKubeService(chart, jsii.String("zookeeper-svc"), &k8s.KubeServiceProps{
 		Metadata: &k8s.ObjectMeta{Name: jsii.String("zookeeper"), Namespace: jsii.String("infra")},
@@ -57,7 +82,7 @@ func CreateKafkaAndZookeeper(chart cdk8s.Chart) {
 		},
 	})
 
-	// Kafka StatefulSet (加入自癒腳本)
+	// Kafka StatefulSet
 	kLabel := map[string]*string{"app": jsii.String("kafka")}
 	k8s.NewKubeService(chart, jsii.String("kafka-svc"), &k8s.KubeServiceProps{
 		Metadata: &k8s.ObjectMeta{Name: jsii.String("kafka-service"), Namespace: jsii.String("infra")},
@@ -82,7 +107,6 @@ func CreateKafkaAndZookeeper(chart cdk8s.Chart) {
 					},
 				},
 				Spec: &k8s.PodSpec{
-					// InitContainer: 如果發現資料不一致，強制清理 meta.properties (核心修復)
 					InitContainers: &[]*k8s.Container{{
 						Name:    jsii.String("fix-cluster-id"),
 						Image:   jsii.String("busybox:latest"),

@@ -1,14 +1,38 @@
 package datastore
 
 import (
+	"os"
+
 	"github.com/aws/jsii-runtime-go"
 	"github.com/cdk8s-team/cdk8s-core-go/cdk8s/v2"
 	"infar-infra/imports/k8s"
 )
 
 func CreateRedis(chart cdk8s.Chart) {
+	env := os.Getenv("INFAR_CLOUD_PROVIDER")
 	label := map[string]*string{"app": jsii.String("redis")}
 
+	// 1. 雲端環境邏輯：對接外部 Redis (如 ElastiCache)
+	if env != "" && env != "local" {
+		endpoint := os.Getenv("REDIS_ENDPOINT")
+		if endpoint == "" {
+			endpoint = "elasticache-redis.internal.aws"
+		}
+
+		k8s.NewKubeService(chart, jsii.String("redis-cloud-svc"), &k8s.KubeServiceProps{
+			Metadata: &k8s.ObjectMeta{
+				Name:      jsii.String("redis-master"),
+				Namespace: jsii.String("infra"),
+			},
+			Spec: &k8s.ServiceSpec{
+				Type:         jsii.String("ExternalName"),
+				ExternalName: jsii.String(endpoint),
+			},
+		})
+		return
+	}
+
+	// 2. 本機環境邏輯：部署 K8s 內部 Redis Stack
 	k8s.NewKubeService(chart, jsii.String("redis-service"), &k8s.KubeServiceProps{
 		Metadata: &k8s.ObjectMeta{Name: jsii.String("redis-master"), Namespace: jsii.String("infra")},
 		Spec: &k8s.ServiceSpec{

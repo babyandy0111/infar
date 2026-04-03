@@ -1,11 +1,37 @@
 package datastore
 
 import (
+	"os"
+
 	"github.com/aws/jsii-runtime-go"
 	"github.com/cdk8s-team/cdk8s-core-go/cdk8s/v2"
+	"infar-infra/imports/k8s"
 )
 
 func CreatePostgreSQL(chart cdk8s.Chart) {
+	env := os.Getenv("INFAR_CLOUD_PROVIDER")
+
+	// 1. 雲端環境邏輯：建立對應外部 RDS 的橋樑
+	if env != "" && env != "local" {
+		endpoint := os.Getenv("DB_ENDPOINT")
+		if endpoint == "" {
+			endpoint = "rds-postgres.internal.aws" // 預設佔位符，由 Terraform 注入真實網址
+		}
+
+		k8s.NewKubeService(chart, jsii.String("postgres-cloud-svc"), &k8s.KubeServiceProps{
+			Metadata: &k8s.ObjectMeta{
+				Name:      jsii.String("postgres"), // 保持名稱一致，讓微服務無感
+				Namespace: jsii.String("infra"),
+			},
+			Spec: &k8s.ServiceSpec{
+				Type:         jsii.String("ExternalName"),
+				ExternalName: jsii.String(endpoint),
+			},
+		})
+		return
+	}
+
+	// 2. 本機環境邏輯：部署 K8s 內部 Pod
 	cdk8s.NewHelm(chart, jsii.String("postgres"), &cdk8s.HelmProps{
 		Chart:       jsii.String("bitnami/postgresql"),
 		Version:     jsii.String("18.5.14"),
