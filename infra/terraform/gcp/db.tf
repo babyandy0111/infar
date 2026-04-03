@@ -5,10 +5,10 @@ resource "google_sql_database_instance" "postgres" {
   region           = var.region
   project          = var.project_id
   
-  edition = "ENTERPRISE"
-  
   settings {
-    tier = "db-f1-micro" 
+    # 🚀 修正：edition 必須在 settings 區塊內
+    edition = "ENTERPRISE"
+    tier    = "db-f1-micro" 
     
     ip_configuration {
       ipv4_enabled                                  = false
@@ -28,13 +28,13 @@ resource "google_sql_database_instance" "postgres" {
   depends_on = [google_service_networking_connection.default]
 }
 
-# 🚀 新增：自動建立資料庫 (Database)
+# 自動建立資料庫 (Database)
 resource "google_sql_database" "infar_db" {
   name     = var.db_name
   instance = google_sql_database_instance.postgres.name
 }
 
-# 🚀 新增：自動建立使用者 (User) 並賦予密碼
+# 自動建立使用者 (User) 並賦予密碼
 resource "google_sql_user" "infar_user" {
   name     = var.db_user
   instance = google_sql_database_instance.postgres.name

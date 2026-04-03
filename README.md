@@ -6,70 +6,104 @@
 
 ## 🏗 基礎架構總覽 (Infrastructure Architecture)
 
-目前 K8s 叢集內已部署並整合以下核心模組：
+為了確保在 Local 開發環境的輕量化與雲端環境 (AWS/GCP) 的高可用性，本專案採用**「環境適應性架構 (Environment Parity)」**，並依據環境自動切換託管與自建模式。
 
-*   **資料儲存與快取層 (Data & Cache)**:
-    *   `PostgreSQL` (關聯式資料庫)
-    *   `Redis Stack` (具備 RediSearch 全文檢索能力)
-*   **事件驅動與大數據層 (Event & Streaming)**:
-    *   `Kafka & ZooKeeper` (高吞吐量訊息佇列，具備自動修復 Cluster ID 機制)
-    *   `Apache Flink` (實時串流運算引擎)
-*   **持續交付層 (CI/CD)**:
-    *   `ArgoCD` (實現 GitOps 自動化部署與狀態同步)
-*   **全方位可觀測性 (Observability)**:
-    *   `Linkerd` (Service Mesh，提供 HTTP/TCP 流量觀測、mTLS 零信任加密)
-    *   `Prometheus & Promtail` (系統指標與容器即時日誌收集)
-    *   `Loki & Grafana` (日誌聚合與中央視覺化，內建 **Infar 專屬雙重戰情室**)
+### 🌍 跨環境服務配置矩陣
+
+| 服務模組 | **Local** (Minikube) | **AWS** (EKS Fargate) | **GCP** (GKE Autopilot) | 說明與雲端策略 |
+| :--- | :--- | :--- | :--- | :--- |
+| **ArgoCD** | K8s Pod | K8s Pod | K8s Pod | CI/CD 核心大腦，所有環境保持一致。雲端使用 ALB/GCE Ingress 對外。 |
+| **PostgreSQL** | K8s Pod | **Amazon RDS (v2)** | **Cloud SQL** | 雲端轉為 Serverless 託管，確保資料高可用與免維護。 |
+| **Redis** | K8s Pod | **ElastiCache** | **Memorystore** | 雲端轉為託管快取，取代原有的 Kafka 成為主力訊息佇列 (Streams)。 |
+| **Kafka & Flink** | (暫停部署) | (暫停部署) | (暫停部署) | **架構減法：** 初期以 Redis Streams 取代，確保叢集輕量化。代碼已保留於 `pkg/streaming/` 供未來擴充。 |
+| **Linkerd (Mesh)** | K8s Pod | **(跳過)** | **(跳過)** | 雲端 Serverless 環境對底層網路權限有限制，故雲端模式自動停用。 |
+| **PLG 監控堆疊** | K8s Pod | **(跳過)** | **(跳過)** | 包含 Prometheus, Loki, Grafana。雲端環境自動轉向使用原生的 CloudWatch / Cloud Logging。 |
+| **跳板機 (Jump)** | (不需要) | K8s Pod | K8s Pod | 雲端專屬。自動將本機流量安全轉發至雲端私有資料庫。 |
 
 ---
 
 ## 🚀 核心亮點：專業級自動化與多雲支援
 
-1.  **純淨的命名規則 (Stable Names)：** 徹底移除了 cdk8s 隨機 Hash，所有服務皆擁有穩定名稱（如 `postgres-0`），優化內部 DNS 解析。
-2.  **多檔案模組化產出：** cdk8s 產出已按功能拆分為 `01-datastore`, `02-streaming` 等獨立 YAML，提升維護與除錯效率。
-3.  **多雲 Serverless 支援：** 內建 **AWS EKS Fargate** 與 **GCP GKE Autopilot** 的 Terraform 模板，實現真正的「零主機管理」K8s 體驗。
-4.  **環境自動識別 (Environment Parity)：** `setup.sh` 與 `cleanup.sh` 支援帶入 `local`, `aws`, `gcp` 等參數，自動切換「K8s 內部 Pod」或「對接雲端託管服務 (RDS/MSK)」的連線邏輯，並智慧更新對應的網址與清理機制。
-5.  **Kafka & Zookeeper 持久化與自癒：** 修正了 Zookeeper 的持久化漏洞，並在 Kafka 加入 InitContainer 以自動解決重啟後的叢集 ID 衝突。
+1.  **純淨命名規則 (Stable Names)：** 徹底移除了 cdk8s 隨機 Hash，所有服務皆擁有穩定名稱（如 `postgres`），優化內部 DNS 解析。
+2.  **多雲 Serverless 支援：** 內建 **AWS EKS Fargate** 與 **GCP GKE Autopilot** 的 Terraform 模板，實現真正的「零主機管理」K8s 體驗。
+3.  **智慧環境識別：** `setup.sh` 支援帶入 `local`, `aws`, `gcp` 等參數，自動執行對應的 Terraform 腳本，抓取產出的資料庫 Endpoint，並自動無縫注入到 K8s 部署中。
+4.  **全自動開發者通道 (Jump Pod)：** 無論部署於 Local 還是雲端，腳本會在最後自動於背景建立 Port-forward 通道。開發者永遠只需連線 `127.0.0.1:5432` 即可直達資料庫。
+5.  **零殘骸環境 (Clean Environment)：** 在 Go 原始碼中直接關閉了 Helm Chart 預設的 Test Hooks (如 Grafana-test)，確保 `kubectl get pod -A` 永遠保持全綠 `Running` 的完美狀態。
 
 ---
 
 ## 💻 本機開發環境 (Minikube) 使用指南
 
 ### 1. 環境前置作業
-確保 `infra/k8s/.env` 已設定資料庫密碼。可複製 `.env.example` 作為基礎。
-
-### 2. 一鍵初始化與部署 (Setup)
+確保 `infra/k8s/.env` 已正確設定。請複製 `.env.example` 並填寫您的密碼與資料庫名稱：
 ```bash
-cd infra/k8s
-./setup.sh local  # 或直接執行 ./setup.sh，預設即為 local
+# 於 infra/k8s/.env 中建立
+DB_PASSWORD=your_secure_password
+REDIS_PASSWORD=your_secure_password
+DB_USER=admin
+DB_NAME=infar_db
+ARGOCD_ADMIN_PASSWORD=your_argocd_password
 ```
 
-### 3. 開啟網路存取通道 (Tunnel)
-請在**新的終端機視窗**中持續執行：
+### 2. 開啟網路存取通道 (Tunnel)
+在 macOS 環境下，必須透過 Tunnel 將 Ingress 流量導入 Docker 虛擬機。請在**新的終端機視窗**中持續執行：
 ```bash
 sudo minikube tunnel
 ```
 
-### 4. 執行檢查與模擬
-```bash
-# 驗證基礎設施 (全綠燈檢查)
-./infra/k8s/tests/verify.sh
-
-# 啟動網格流量模擬器 (點亮戰情室)
-./infra/k8s/tests/simulate-traffic.sh
-```
-
-### 5. 系統存取資訊
-*   **Grafana**: [http://grafana.local](http://grafana.local) (admin/admin)
-*   **Flink UI**: [http://flink.local](http://flink.local)
-*   **ArgoCD**: [http://argocd.local](http://argocd.local) (admin/您的密碼)
-
-### 6. 環境深度清理 (Cleanup)
-當需要恢復乾淨環境時，可執行以下腳本：
+### 3. 一鍵初始化與部署 (Setup)
+進入腳本目錄並執行安裝。此腳本將自動編譯 cdk8s 模組、安裝 Linkerd、同步狀態，並於背景**自動開啟資料庫的連線通道**。
 ```bash
 cd infra/k8s
-./cleanup.sh local
-# 將自動卸載所有 K8s 資源、復原 /etc/hosts，並可選擇性清空持久化資料(PVC)
+./setup.sh local  # 或直接執行 ./setup.sh
+```
+
+### 4. 執行深度驗證 (Verify)
+提供自動化腳本，以驗證所有組件是否正確運作。該腳本會動態讀取 K8s 狀態，並測試資料庫與 Ingress 連線：
+```bash
+./tests/verify.sh local
+```
+
+### 5. 開發者連線資訊 (Access Guide)
+執行 `setup.sh` 後，系統已自動將資料庫通道映射至本機。
+*   **PostgreSQL**: `127.0.0.1:5432` (帳號密碼請見 `.env`)
+*   **Redis**: `127.0.0.1:6379`
+*   **ArgoCD**: [http://argocd.local](http://argocd.local)
+*   **Grafana**: [http://grafana.local](http://grafana.local) (預設帳號: admin/admin)
+*   **Service Mesh 拓撲**: `linkerd viz dashboard`
+
+💡 *若需手動關閉背景的資料庫通道，請執行：* `pkill -f "port-forward"`
+
+---
+
+## ☁️ 多雲部署指南 (Production-Ready)
+
+當準備從本地轉向雲端時，請確保已完成雲端 CLI (`aws` 或 `gcloud`) 的本機授權，並在 `.env` 中設定了對應的 `PROJECT_ID` 與 `REGION`。
+
+### 步驟 1：一鍵啟動雲端部署
+您**不需要**手動執行 Terraform。我們的神兵腳本會自動接管一切：
+```bash
+cd infra/k8s
+./setup.sh gcp  # 或 ./setup.sh aws
+```
+**這個指令會自動執行以下奇蹟：**
+1. 啟動 Terraform 引擎，在雲端建立 VPC、Serverless K8s 叢集與託管資料庫 (RDS/Cloud SQL)。
+2. 自動抓取 Terraform 輸出的資料庫 Endpoint，並安全地注入 K8s。
+3. 自動將您的 kubectl 焦點切換至剛建好的雲端叢集。
+4. 部署 ArgoCD，並建立指向雲端資料庫的 **Jump Pod**，最後自動幫您在背景開啟 Port-forward。
+
+部署完成後，您依然可以透過 `127.0.0.1:5432` 在本機用 IDE 直接存取遠在雲端的私有資料庫！
+
+### 步驟 2：獲取雲端 Ingress 網址
+執行完畢後，腳本會提示您如何獲取雲端 LoadBalancer 的真實 IP：
+```bash
+kubectl get ingress argocd-server -n argocd
+```
+
+### 步驟 3：雲端環境深度清理 (Cleanup)
+當測試完畢，為避免產生昂貴的雲端帳單，請務必執行清理腳本。它會自動觸發 `terraform destroy` 徹底回收所有資源：
+```bash
+./cleanup.sh gcp  # 或 ./cleanup.sh aws
 ```
 
 ---
@@ -81,11 +115,10 @@ cd infra/k8s
 ├── infra/                   # 基礎設施根目錄
 │   ├── k8s/                 # Kubernetes 應用層與資源宣告 (cdk8s)
 │   │   ├── main.go          # 主程式 (多檔案模組化產出)
-│   │   ├── pkg/             # 模組定義 (Datastore, Streaming, Observability, CICD)
-│   │   ├── tests/           # verify.sh, simulate-traffic.sh
-│   │   ├── setup.sh         # 具備多雲環境感知之冪等安裝腳本
-│   │   ├── cleanup.sh       # 具備多雲環境感知之深度清理腳本
-│   │   └── dist/            # (Ignored) 產出的多份 K8s YAML
+│   │   ├── pkg/             # 模組定義 (Datastore, Observability, CICD, Platform)
+│   │   ├── tests/           # verify.sh (防呆動態驗證)
+│   │   ├── setup.sh         # 具備多雲環境感知之總指揮安裝腳本
+│   │   └── cleanup.sh       # 具備多雲環境感知之深度清理腳本
 │   └── terraform/           # 雲端底層基礎設施 (IaC)
 │       ├── aws/             # EKS Fargate (Serverless) 與 RDS v2 配置
 │       └── gcp/             # GKE Autopilot (Serverless) 與 Cloud SQL 配置
@@ -94,34 +127,6 @@ cd infra/k8s
 ```
 
 ---
-
-## ☁️ 多雲部署指南 (Production-Ready)
-
-當準備從本地轉向雲端時，請在 `.env` 設定雲端專案 ID 與區域，並確保已完成雲端 CLI (aws/gcloud) 的本機授權。
-
-### 1. 建立雲端資源 (以 GCP 為例)
-```bash
-cd infra/terraform/gcp
-terraform init
-terraform apply -auto-approve
-```
-*(執行完畢後，GCP 將建立 GKE Autopilot 叢集與 Cloud SQL。)*
-
-### 2. 套用 K8s 配置與自動對接
-```bash
-cd infra/k8s
-./setup.sh gcp  
-```
-*(腳本將自動抓取 Terraform 輸出的雲端資料庫 Endpoint，將微服務安全對接，並提供 Cloud LoadBalancer 入口網址。)*
-
-### 3. 雲端環境銷毀
-```bash
-cd infra/k8s
-./cleanup.sh gcp 
-```
-*(腳本將自動執行 terraform destroy 回收所有雲端資源，避免不必要的開銷。)*
-
----
 ## 📝 下一階段目標 (Phase 2 Roadmap)
-- [ ] **go-zero 微服務建置**：於 `backend/` 建立服務並接入 PLG 監控。
+- [ ] **go-zero 微服務建置**：於 `backend/` 建立服務，並透過 `127.0.0.1` 統一連線邏輯。
 - [ ] **ArgoCD GitOps**：將部署 YAML 與 Git 儲存庫同步。
