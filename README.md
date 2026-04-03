@@ -27,8 +27,8 @@
 
 1.  **純淨的命名規則 (Stable Names)：** 徹底移除了 cdk8s 隨機 Hash，所有服務皆擁有穩定名稱（如 `postgres-0`），優化內部 DNS 解析。
 2.  **多檔案模組化產出：** cdk8s 產出已按功能拆分為 `01-datastore`, `02-streaming` 等獨立 YAML，提升維護與除錯效率。
-3.  **多雲 Serverless 支援：** 提供 AWS EKS Fargate 等多雲 Terraform 模板，實現真正的「零主機管理」K8s 體驗。
-4.  **環境自動識別：** `setup.sh` 可帶入 `local`, `aws`, `gcp` 等參數，自動切換「K8s 內部 Pod」或「雲端託管服務 (RDS/MSK)」連線邏輯。
+3.  **多雲 Serverless 支援：** 內建 **AWS EKS Fargate** 與 **GCP GKE Autopilot** 的 Terraform 模板，實現真正的「零主機管理」K8s 體驗。
+4.  **環境自動識別 (Environment Parity)：** `setup.sh` 與 `cleanup.sh` 支援帶入 `local`, `aws`, `gcp` 等參數，自動切換「K8s 內部 Pod」或「對接雲端託管服務 (RDS/MSK)」的連線邏輯，並智慧更新對應的網址與清理機制。
 5.  **Kafka & Zookeeper 持久化與自癒：** 修正了 Zookeeper 的持久化漏洞，並在 Kafka 加入 InitContainer 以自動解決重啟後的叢集 ID 衝突。
 
 ---
@@ -36,12 +36,12 @@
 ## 💻 本機開發環境 (Minikube) 使用指南
 
 ### 1. 環境前置作業
-確保 `infra/k8s/.env` 已設定資料庫密碼。
+確保 `infra/k8s/.env` 已設定資料庫密碼。可複製 `.env.example` 作為基礎。
 
 ### 2. 一鍵初始化與部署 (Setup)
 ```bash
 cd infra/k8s
-./setup.sh local  # 預設即為 local
+./setup.sh local  # 或直接執行 ./setup.sh，預設即為 local
 ```
 
 ### 3. 開啟網路存取通道 (Tunnel)
@@ -64,6 +64,14 @@ sudo minikube tunnel
 *   **Flink UI**: [http://flink.local](http://flink.local)
 *   **ArgoCD**: [http://argocd.local](http://argocd.local) (admin/您的密碼)
 
+### 6. 環境深度清理 (Cleanup)
+當需要恢復乾淨環境時，可執行以下腳本：
+```bash
+cd infra/k8s
+./cleanup.sh local
+# 將自動卸載所有 K8s 資源、復原 /etc/hosts，並可選擇性清空持久化資料(PVC)
+```
+
 ---
 
 ## 📂 專案目錄結構
@@ -71,37 +79,47 @@ sudo minikube tunnel
 ```text
 /
 ├── infra/                   # 基礎設施根目錄
-│   ├── k8s/                 # Kubernetes 資源宣告 (cdk8s)
+│   ├── k8s/                 # Kubernetes 應用層與資源宣告 (cdk8s)
 │   │   ├── main.go          # 主程式 (多檔案模組化產出)
 │   │   ├── pkg/             # 模組定義 (Datastore, Streaming, Observability, CICD)
 │   │   ├── tests/           # verify.sh, simulate-traffic.sh
-│   │   ├── setup.sh         # 冪等自癒版安裝腳本
-│   │   ├── cleanup.sh       # 環境清理腳本
+│   │   ├── setup.sh         # 具備多雲環境感知之冪等安裝腳本
+│   │   ├── cleanup.sh       # 具備多雲環境感知之深度清理腳本
 │   │   └── dist/            # (Ignored) 產出的多份 K8s YAML
 │   └── terraform/           # 雲端底層基礎設施 (IaC)
-│       ├── aws/             # EKS Fargate (Serverless) 配置
-│       ├── gcp/             # GKE Autopilot 配置 (預留)
-│       └── azure/           # AKS Virtual Nodes 配置 (預留)
+│       ├── aws/             # EKS Fargate (Serverless) 與 RDS v2 配置
+│       └── gcp/             # GKE Autopilot (Serverless) 與 Cloud SQL 配置
 ├── backend/                 # [準備開發] go-zero 微服務
 └── frontend/                # [準備開發] 前端應用
 ```
 
 ---
 
-## ☁️ 多雲部署指南 (Terraform)
+## ☁️ 多雲部署指南 (Production-Ready)
 
-當準備從本地轉向雲端時：
+當準備從本地轉向雲端時，請在 `.env` 設定雲端專案 ID 與區域，並確保已完成雲端 CLI (aws/gcloud) 的本機授權。
 
-1.  **建立雲端資源：**
-    ```bash
-    cd infra/terraform/aws
-    terraform init && terraform apply
-    ```
-2.  **套用 K8s 配置：**
-    ```bash
-    cd infra/k8s
-    ./setup.sh aws  # 自動對接雲端 RDS/MSK
-    ```
+### 1. 建立雲端資源 (以 GCP 為例)
+```bash
+cd infra/terraform/gcp
+terraform init
+terraform apply -auto-approve
+```
+*(執行完畢後，GCP 將建立 GKE Autopilot 叢集與 Cloud SQL。)*
+
+### 2. 套用 K8s 配置與自動對接
+```bash
+cd infra/k8s
+./setup.sh gcp  
+```
+*(腳本將自動抓取 Terraform 輸出的雲端資料庫 Endpoint，將微服務安全對接，並提供 Cloud LoadBalancer 入口網址。)*
+
+### 3. 雲端環境銷毀
+```bash
+cd infra/k8s
+./cleanup.sh gcp 
+```
+*(腳本將自動執行 terraform destroy 回收所有雲端資源，避免不必要的開銷。)*
 
 ---
 ## 📝 下一階段目標 (Phase 2 Roadmap)
