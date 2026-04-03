@@ -19,23 +19,19 @@ func CreateArgoCD(chart cdk8s.Chart, password string) {
 	env := os.Getenv("INFAR_CLOUD_PROVIDER")
 	isGCP := env == "gcp"
 
-	// 根據環境動態生成 Ingress 設定
+	// 根據環境動態生成 Ingress 與 Service 設定
 	var ingressValues map[string]interface{}
+	var serviceType string
+
 	if isGCP {
-		// 🚀 GCP 雲端極限設定：解決 GCE Health Check 失敗問題
+		// 🚀 GCP 雲端極限設定：捨棄難搞的 GCE Ingress，直接用 TCP LoadBalancer
+		serviceType = "LoadBalancer"
 		ingressValues = map[string]interface{}{
-			"enabled":          true,
-			"ingressClassName": jsii.String("gce"),
-			"hosts":            []interface{}{}, // 徹底移除預設的 example.com
-			"https":            false,           // 雲端內部強迫走 HTTP
-			"annotations": map[string]interface{}{
-				"kubernetes.io/ingress.class": nil,
-			},
-			"paths":    []*string{jsii.String("/")},
-			"pathType": "Prefix",
+			"enabled": false, // 雲端不透過 Ingress
 		}
 	} else {
-		// 🏠 Local 模式：保留漂亮的虛擬網域
+		// 🏠 Local 模式：保留 NodePort 與漂亮的虛擬網域 (Nginx Ingress)
+		serviceType = "NodePort"
 		ingressValues = map[string]interface{}{
 			"enabled":          true,
 			"ingressClassName": jsii.String("nginx"),
@@ -60,7 +56,7 @@ func CreateArgoCD(chart cdk8s.Chart, password string) {
 			},
 			"server": map[string]interface{}{
 				"service": map[string]interface{}{
-					"type": "NodePort",
+					"type": serviceType, // 🚀 動態套用 LoadBalancer 或 NodePort
 				},
 				"extraArgs": []*string{
 					jsii.String("--insecure"),

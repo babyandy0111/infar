@@ -179,5 +179,5 @@ if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
     echo "👉 Grafana URL: http://grafana.local"
 else
     echo "👉 雲端環境部署完成！請等待 Cloud LoadBalancer 建立。"
-    echo "🔍 取得 ArgoCD 外部網址: kubectl get ingress argocd-server -n argocd"
+    echo "🔍 取得 ArgoCD 外部網址: kubectl get svc argocd-server -n argocd"
 fi

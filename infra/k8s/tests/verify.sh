@@ -97,8 +97,9 @@ echo "4. 網路入口存取測試 (Ingress):"
 if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
     TARGET_IP="127.0.0.1"
 else
-    LB_ADDRESS=$(kubectl get ingress argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-    if [ -z "$LB_ADDRESS" ]; then LB_ADDRESS=$(kubectl get ingress argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].ip}'); fi
+    # 雲端模式：改從 Service 的 LoadBalancer 中擷取 IP
+    LB_ADDRESS=$(kubectl get svc argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null)
+    if [ -z "$LB_ADDRESS" ]; then LB_ADDRESS=$(kubectl get svc argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null); fi
     TARGET_IP=$LB_ADDRESS
 fi
 
