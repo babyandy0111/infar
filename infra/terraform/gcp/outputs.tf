@@ -12,3 +12,11 @@ output "configure_kubectl" {
   description = "設定 K8s 本機連線的方法"
   value       = "gcloud container clusters get-credentials ${module.gke.name} --region ${var.region} --project ${var.project_id}"
 }
+
+output "db_endpoint" {
+  value = google_sql_database_instance.postgres.private_ip_address
+}
+
+output "redis_endpoint" {
+  value = google_redis_instance.redis.host
+}

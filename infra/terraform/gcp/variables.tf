@@ -1,14 +1,12 @@
 variable "project_id" {
-  description = "GCP Project ID"
+  description = "GCP Project ID (從環境變數 TF_VAR_project_id 讀取)"
   type        = string
-  # 請在此填入您的 GCP 專案 ID
-  default     = "your-gcp-project-id" 
 }
 
 variable "region" {
   description = "GCP Region"
   type        = string
-  default     = "asia-east1" # 台灣彰化機房
+  default     = "asia-east1"
 }
 
 variable "cluster_name" {

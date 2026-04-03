@@ -1,11 +1,9 @@
 variable "region" {
-  description = "AWS Region"
+  description = "AWS Region (從環境變數 TF_VAR_region 讀取)"
   type        = string
-  default     = "ap-northeast-1" # 東京區域，延遲較低
 }
 
 variable "cluster_name" {
-  description = "EKS Cluster Name"
+  description = "EKS Cluster Name (從環境變數 TF_VAR_cluster_name 讀取)"
   type        = string
-  default     = "infar-cloud-eks"
 }
