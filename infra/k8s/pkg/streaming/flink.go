@@ -1,6 +1,8 @@
 package streaming
 
 import (
+	"os"
+
 	"github.com/aws/jsii-runtime-go"
 	"github.com/cdk8s-team/cdk8s-core-go/cdk8s/v2"
 	"infar-infra/imports/k8s"
@@ -92,18 +94,33 @@ func CreateFlink(chart cdk8s.Chart) {
 		},
 	})
 
+	env := os.Getenv("INFAR_CLOUD_PROVIDER")
+	isGCP := env == "gcp"
+	isLocal := env == "" || env == "local"
+
+	ingressAnnotations := map[string]*string{}
+	if !isGCP {
+		ingressAnnotations["kubernetes.io/ingress.class"] = jsii.String("nginx")
+	}
+
+	var host *string
+	if isLocal {
+		host = jsii.String("flink.local")
+	} else {
+		// 在雲端不綁定特定 Host，直接用 IP 就能看
+		host = nil
+	}
+
 	// Ingress
 	k8s.NewKubeIngress(chart, jsii.String("flink-ing"), &k8s.KubeIngressProps{
 		Metadata: &k8s.ObjectMeta{
-			Name:      jsii.String("flink-ui"),
-			Namespace: jsii.String("infra"),
-			Annotations: &map[string]*string{
-				"kubernetes.io/ingress.class": jsii.String("nginx"),
-			},
+			Name:        jsii.String("flink-ui"),
+			Namespace:   jsii.String("infra"),
+			Annotations: &ingressAnnotations,
 		},
 		Spec: &k8s.IngressSpec{
 			Rules: &[]*k8s.IngressRule{{
-				Host: jsii.String("flink.local"),
+				Host: host,
 				Http: &k8s.HttpIngressRuleValue{
 					Paths: &[]*k8s.HttpIngressPath{{
 						Path:     jsii.String("/"),

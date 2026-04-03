@@ -68,11 +68,22 @@ fi
 echo ""
 echo "2. 執行深度功能連線檢查..."
 
-# 這裡不論環境，只要能連上 Service 即代表對接成功 (不管是連 Pod 還是連 ExternalName)
+# 獲取密碼
 PG_PASS=$(kubectl get secret infra-secrets -n infra -o jsonpath="{.data.postgresql-password}" 2>/dev/null | base64 --decode)
+REDIS_PASS=$(kubectl get secret infra-secrets -n infra -o jsonpath="{.data.redis-password}" 2>/dev/null | base64 --decode)
 
+# 驗證 PostgreSQL
 printf "   - 驗證 PostgreSQL 連線:       "
-if kubectl run tmp-shell --rm -i --tty --image bitnami/postgresql:16 --env PGPASSWORD="$PG_PASS" -- sh -c "pg_isready -h postgres -p 5432 -U admin" > /dev/null 2>&1; then
+if kubectl run verify-pg-tmp --rm -i --restart=Never --image bitnami/postgresql:16 --env PGPASSWORD="$PG_PASS" -- sh -c "pg_isready -h postgres -p 5432 -U admin" > /dev/null 2>&1; then
+    echo "✅ PASS (對接正常)"
+else
+    echo "❌ FAIL (無法建立連線)"
+fi
+
+# 驗證 Redis
+printf "   - 驗證 Redis 連線:            "
+# 使用 redis-cli PING 測試。注意：雲端託管 Redis 可能沒有密碼或密碼不同，這裡先用 local 邏輯嘗試
+if kubectl run verify-redis-tmp --rm -i --restart=Never --image redis:7.2-alpine -- sh -c "redis-cli -h redis-master -p 6379 -a $REDIS_PASS PING" 2>/dev/null | grep -q "PONG"; then
     echo "✅ PASS (對接正常)"
 else
     echo "❌ FAIL (無法建立連線)"
@@ -86,7 +97,6 @@ echo "3. 網路入口存取測試 (Ingress):"
 
 if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
     TARGET_IP="127.0.0.1"
-    RESOLVE_DOMAIN="argocd.local:80:$TARGET_IP"
     echo "   (測試模式：使用本地 /etc/hosts 解析)"
 else
     # 雲端模式：動態獲取 LoadBalancer 地址
@@ -96,7 +106,6 @@ else
         LB_ADDRESS=$(kubectl get ingress argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
     fi
     TARGET_IP=$LB_ADDRESS
-    RESOLVE_DOMAIN="argocd.local:80:$TARGET_IP"
 fi
 
 test_ingress() {

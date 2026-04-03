@@ -32,12 +32,8 @@ if [ "$INFAR_CLOUD_PROVIDER" != "local" ]; then
 
     # GCP 專屬 API 預先開啟
     if [ "$INFAR_CLOUD_PROVIDER" == "gcp" ]; then
-        echo "   - 正在啟動 GCP 必要 API (Compute, GKE, SQL, Redis)..."
-        gcloud services enable compute.googleapis.com \
-                               container.googleapis.com \
-                               sqladmin.googleapis.com \
-                               redis.googleapis.com \
-                               cloudresourcemanager.googleapis.com > /dev/null
+        echo "   - 正在啟動 GCP 必要 API..."
+        gcloud services enable compute.googleapis.com container.googleapis.com sqladmin.googleapis.com redis.googleapis.com servicenetworking.googleapis.com cloudresourcemanager.googleapis.com > /dev/null
     fi
 
     TF_DIR="../terraform/$INFAR_CLOUD_PROVIDER"
@@ -49,17 +45,18 @@ if [ "$INFAR_CLOUD_PROVIDER" != "local" ]; then
 
     pushd "$TF_DIR" > /dev/null
     
-    echo "   - 正在初始化與同步雲端資源 (這可能需要 15~20 分鐘)..."
+    echo "   - 正在初始化與同步雲端資源..."
     terraform init -upgrade > /dev/null
     terraform apply -auto-approve || exit 1
     
     echo "   - 正在自動抓取雲端資源 Endpoint..."
-    # 真實獲取 Terraform 輸出的 Endpoint 並注入環境變數給 cdk8s
     export DB_ENDPOINT=$(terraform output -raw db_endpoint)
     export REDIS_ENDPOINT=$(terraform output -raw redis_endpoint)
     
-    # 自動切換 kubectl 到雲端叢集
     echo "   - 更新 K8s 叢集連線憑證..."
+    if [ "$INFAR_CLOUD_PROVIDER" == "gcp" ]; then
+        gcloud components install gke-gcloud-auth-plugin --quiet > /dev/null 2>&1
+    fi
     CONF_CMD=$(terraform output -raw configure_kubectl)
     eval "$CONF_CMD"
     
@@ -74,7 +71,6 @@ else
     echo "💻 0. [本機模式] 檢查系統依賴..."
     minikube addons enable ingress > /dev/null
 fi
-export PATH=$PATH:$HOME/.linkerd2/bin
 
 # ==========================================
 # 1. 建立與設定 Namespaces
@@ -82,19 +78,36 @@ export PATH=$PATH:$HOME/.linkerd2/bin
 echo "1. 建立與設定 Namespaces..."
 for ns in infra argocd observability linkerd-viz; do
     kubectl create namespace "$ns" --dry-run=client -o yaml | kubectl apply -f - > /dev/null
-    kubectl label namespace "$ns" linkerd.io/inject=enabled --overwrite > /dev/null
+    
+    # 🚀 關鍵架構決策：只有 local 環境才啟用 Linkerd 自動注入
+    if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
+        kubectl label namespace "$ns" linkerd.io/inject=enabled --overwrite > /dev/null
+    else
+        # 雲端環境移除標籤，避免啟動失敗
+        kubectl label namespace "$ns" linkerd.io/inject- > /dev/null 2>&1
+    fi
 done
 
 # ==========================================
-# 2. 安裝/檢查 Service Mesh (Linkerd)
+# 2. 安裝/檢查 Service Mesh (Linkerd) - 僅限 Local
 # ==========================================
-echo "2. 檢查 Service Mesh 狀態..."
-if ! kubectl get namespace linkerd &> /dev/null; then
-    echo "📦 正在安裝 Linkerd Service Mesh..."
-    kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.4.0/standard-install.yaml > /dev/null
-    linkerd install --crds | kubectl apply -f -
-    linkerd install --set proxyInit.runAsRoot=true | kubectl apply -f -
-    linkerd viz install | kubectl apply -f -
+if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
+    echo "2. 檢查 Service Mesh 狀態 (僅 Local 啟用)..."
+    export PATH=$PATH:$HOME/.linkerd2/bin
+    if ! kubectl get namespace linkerd &> /dev/null; then
+        echo "📦 正在安裝 Linkerd Service Mesh..."
+        kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.4.0/standard-install.yaml > /dev/null
+        linkerd install --crds | kubectl apply -f -
+        linkerd install --set proxyInit.runAsRoot=true | kubectl apply -f -
+        
+        echo "   - 等待 Linkerd 控制平面啟動..."
+        linkerd check --wait 5m
+        
+        echo "   - 安裝 Linkerd Viz 視覺化擴展..."
+        linkerd viz install | kubectl apply -f -
+    fi
+else
+    echo "2. 跳過 Service Mesh 安裝 (雲端環境使用原生 Cloud Monitoring)..."
 fi
 
 # ==========================================
@@ -103,23 +116,22 @@ fi
 echo "3. 生成 K8s YAML 並執行同步 (cdk8s)..."
 go run main.go || exit 1
 
-# 更新 Helm Repos 
 helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null
 helm repo add argo https://argoproj.github.io/argo-helm > /dev/null
 helm repo add grafana https://grafana.github.io/helm-charts > /dev/null
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts > /dev/null
 helm repo update > /dev/null
 
-# 套用資源
 kubectl apply --server-side --force-conflicts -f dist/
 
 # ==========================================
 # 4. 後續自動化設定
 # ==========================================
-echo "4. 匯入 Grafana 戰情室..."
-./import-dashboard.sh
-
+# 只有 local 環境才需要匯入戰情室 (雲端環境 Grafana 將被閹割或移除)
 if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
+    echo "4. 匯入 Grafana 戰情室..."
+    ./import-dashboard.sh
+
     echo "5. 更新本機 /etc/hosts..."
     TARGET_IP="127.0.0.1"
     if ! grep -q "argocd.local" /etc/hosts; then
@@ -127,7 +139,7 @@ if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
         echo "$TARGET_IP argocd.local grafana.local flink.local" | sudo tee -a /etc/hosts > /dev/null
     fi
 else
-    echo "5. 跳過本機 hosts 更新 (雲端環境使用 Ingress 網址)..."
+    echo "4. 跳過戰情室匯入與 hosts 更新 (雲端環境配置)..."
 fi
 
 echo "✅ 基礎設施 [$INFAR_CLOUD_PROVIDER] 已全自動同步完成！"
@@ -135,7 +147,7 @@ echo "✅ 基礎設施 [$INFAR_CLOUD_PROVIDER] 已全自動同步完成！"
 if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
     echo "👉 ArgoCD URL: http://argocd.local (請確保已執行 minikube tunnel)"
 else
-    echo "👉 雲端環境部署完成！請等待 Cloud LoadBalancer (ALB/Ingress) 建立。"
+    echo "👉 雲端環境部署完成！請等待 Cloud LoadBalancer 建立。"
     echo "🔍 取得 ArgoCD 外部網址: kubectl get ingress argocd-server -n argocd"
-    echo "🔍 取得 Grafana 外部網址: kubectl get ingress grafana -n observability"
+    echo "🔍 取得 Flink 外部網址:  kubectl get ingress flink-ui -n infra"
 fi

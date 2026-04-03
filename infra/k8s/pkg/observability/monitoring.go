@@ -1,12 +1,24 @@
 package observability
 
 import (
+	"os"
+
+	"infar-infra/imports/k8s"
+
 	"github.com/aws/jsii-runtime-go"
 	"github.com/cdk8s-team/cdk8s-core-go/cdk8s/v2"
-	"infar-infra/imports/k8s"
 )
 
 func CreateMonitoring(chart cdk8s.Chart) {
+	env := os.Getenv("INFAR_CLOUD_PROVIDER")
+	isLocal := env == "" || env == "local"
+
+	// 🚀 關鍵架構決策：只有本機環境才安裝 PLG Stack 與 Linkerd Auth
+	// 在雲端環境 (AWS/GCP) 我們擁抱原生的 CloudWatch / Cloud Monitoring
+	if !isLocal {
+		return
+	}
+
 	// 1. Prometheus
 	cdk8s.NewHelm(chart, jsii.String("prometheus"), &cdk8s.HelmProps{
 		Chart:       jsii.String("prometheus-community/prometheus"),
@@ -21,6 +33,7 @@ func CreateMonitoring(chart cdk8s.Chart) {
 				"persistentVolume": map[string]interface{}{"enabled": false},
 			},
 			"prometheus-node-exporter": map[string]interface{}{
+				"enabled":          true,
 				"fullnameOverride": "prometheus-node-exporter",
 				"podAnnotations":   map[string]interface{}{"linkerd.io/inject": "disabled"},
 			},
@@ -100,6 +113,7 @@ func CreateMonitoring(chart cdk8s.Chart) {
 			"podSecurityContext":       map[string]interface{}{"runAsUser": 472, "runAsGroup": 472, "fsGroup": 472},
 			"containerSecurityContext": map[string]interface{}{"runAsUser": 472, "runAsGroup": 472},
 			"initChownData":            map[string]interface{}{"enabled": false},
+			// Ingress settings handled generically (Since Grafana is only deployed locally, nginx is safe here)
 			"ingress": map[string]interface{}{
 				"enabled": true, "hosts": []*string{jsii.String("grafana.local")}, "ingressClassName": "nginx",
 			},
@@ -121,19 +135,19 @@ func CreateMonitoring(chart cdk8s.Chart) {
 				},
 			},
 			"dashboardsConfigMaps": map[string]interface{}{
-				"infar": "infar-warroom-v2", // 關鍵修正：名稱必須匹配
+				"infar": "infar-warroom-v2",
 			},
 		},
 	})
 
-	// 5. Linkerd Auth Policy (解決 403)
+	// 5. Linkerd Auth Policy (開放 Grafana 讀取 Linkerd 指標的權限)
 	serverObj := cdk8s.NewApiObject(chart, jsii.String("linkerd-server"), &cdk8s.ApiObjectProps{
 		ApiVersion: jsii.String("policy.linkerd.io/v1beta3"),
 		Kind:       jsii.String("Server"),
 		Metadata:   &cdk8s.ApiObjectMetadata{Name: jsii.String("prometheus-admin"), Namespace: jsii.String("linkerd-viz")},
 	})
 	serverObj.AddJsonPatch(cdk8s.JsonPatch_Add(jsii.String("/spec"), map[string]interface{}{
-		"podSelector": map[string]interface{}{"matchLabels": map[string]interface{}{"component": "prometheus"}}, // 修正標籤
+		"podSelector": map[string]interface{}{"matchLabels": map[string]interface{}{"component": "prometheus"}},
 		"port":        9090, "proxyProtocol": "HTTP/1",
 	}))
 
@@ -158,6 +172,11 @@ func CreateMonitoring(chart cdk8s.Chart) {
 }
 
 func CreateDashboards(chart cdk8s.Chart) {
+	env := os.Getenv("INFAR_CLOUD_PROVIDER")
+	if env != "" && env != "local" {
+		return
+	}
+
 	jsonContent := `
 {
   "title": "Infar - Microservices War Room",
@@ -325,7 +344,7 @@ func CreateDashboards(chart cdk8s.Chart) {
 
 	k8s.NewKubeConfigMap(chart, jsii.String("infar-dashboard"), &k8s.KubeConfigMapProps{
 		Metadata: &k8s.ObjectMeta{
-			Name:      jsii.String("infar-warroom-v2"), // 關鍵修正：與 Grafana values 一致
+			Name:      jsii.String("infar-warroom-v2"),
 			Namespace: jsii.String("observability"),
 			Labels:    &map[string]*string{"grafana_dashboard": jsii.String("1")},
 		},
