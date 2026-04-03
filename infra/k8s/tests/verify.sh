@@ -7,7 +7,7 @@ echo "🔍 開始驗證基礎設施狀態..."
 
 # 定義要檢查的關鍵字清單 "關鍵字:Namespace"
 SERVICES=(
-    "postgresql:infra"
+    "postgres:infra"
     "redis:infra"
     "zookeeper:infra"
     "kafka:infra"

@@ -32,13 +32,28 @@ func CreateFlink(chart cdk8s.Chart) {
 				Metadata: &k8s.ObjectMeta{
 					Labels: &jmLabel,
 					Annotations: &map[string]*string{
-						"linkerd.io/inject":    jsii.String("enabled"),
-						"prometheus.io/scrape": jsii.String("true"),
-						"prometheus.io/port":   jsii.String("4191"),
+						"linkerd.io/inject":              jsii.String("enabled"),
+						"config.linkerd.io/opaque-ports": jsii.String("6123"), // 避免 Linkerd 攔截 Flink RPC
+						"prometheus.io/scrape":           jsii.String("true"),
+						"prometheus.io/port":             jsii.String("4191"),
 					},
 				},
 				Spec: &k8s.PodSpec{
-					Containers: &[]*k8s.Container{{Name: jsii.String("jobmanager"), Image: jsii.String("flink:1.18.1-java11"), Args: &[]*string{jsii.String("jobmanager")}, Ports: &[]*k8s.ContainerPort{{ContainerPort: jsii.Number(6123)}, {ContainerPort: jsii.Number(8081)}}}},
+					Containers: &[]*k8s.Container{{
+						Name:  jsii.String("jobmanager"),
+						Image: jsii.String("flink:1.18.1-java11"),
+						Args:  &[]*string{jsii.String("jobmanager")},
+						Ports: &[]*k8s.ContainerPort{
+							{ContainerPort: jsii.Number(6123)},
+							{ContainerPort: jsii.Number(8081)},
+						},
+						Env: &[]*k8s.EnvVar{
+							{
+								Name:  jsii.String("JOB_MANAGER_RPC_ADDRESS"),
+								Value: jsii.String("flink-jobmanager.infra.svc.cluster.local"),
+							},
+						},
+					}},
 				},
 			},
 		},
@@ -54,13 +69,24 @@ func CreateFlink(chart cdk8s.Chart) {
 				Metadata: &k8s.ObjectMeta{
 					Labels: &tmLabel,
 					Annotations: &map[string]*string{
-						"linkerd.io/inject":    jsii.String("enabled"),
-						"prometheus.io/scrape": jsii.String("true"),
-						"prometheus.io/port":   jsii.String("4191"),
+						"linkerd.io/inject":              jsii.String("enabled"),
+						"config.linkerd.io/opaque-ports": jsii.String("6123"), // 避免 Linkerd 攔截 Flink RPC
+						"prometheus.io/scrape":           jsii.String("true"),
+						"prometheus.io/port":             jsii.String("4191"),
 					},
 				},
 				Spec: &k8s.PodSpec{
-					Containers: &[]*k8s.Container{{Name: jsii.String("taskmanager"), Image: jsii.String("flink:1.18.1-java11"), Args: &[]*string{jsii.String("taskmanager")}, Env: &[]*k8s.EnvVar{{Name: jsii.String("JOB_MANAGER_RPC_ADDRESS"), Value: jsii.String("flink-jobmanager.infra.svc.cluster.local")}}}},
+					Containers: &[]*k8s.Container{{
+						Name:  jsii.String("taskmanager"),
+						Image: jsii.String("flink:1.18.1-java11"),
+						Args:  &[]*string{jsii.String("taskmanager")},
+						Env: &[]*k8s.EnvVar{
+							{
+								Name:  jsii.String("JOB_MANAGER_RPC_ADDRESS"),
+								Value: jsii.String("flink-jobmanager.infra.svc.cluster.local"),
+							},
+						},
+					}},
 				},
 			},
 		},
@@ -68,9 +94,29 @@ func CreateFlink(chart cdk8s.Chart) {
 
 	// Ingress
 	k8s.NewKubeIngress(chart, jsii.String("flink-ing"), &k8s.KubeIngressProps{
-		Metadata: &k8s.ObjectMeta{Name: jsii.String("flink-ui"), Namespace: jsii.String("infra"), Annotations: &map[string]*string{"kubernetes.io/ingress.class": jsii.String("nginx")}},
+		Metadata: &k8s.ObjectMeta{
+			Name:      jsii.String("flink-ui"),
+			Namespace: jsii.String("infra"),
+			Annotations: &map[string]*string{
+				"kubernetes.io/ingress.class": jsii.String("nginx"),
+			},
+		},
 		Spec: &k8s.IngressSpec{
-			Rules: &[]*k8s.IngressRule{{Host: jsii.String("flink.local"), Http: &k8s.HttpIngressRuleValue{Paths: &[]*k8s.HttpIngressPath{{Path: jsii.String("/"), PathType: jsii.String("Prefix"), Backend: &k8s.IngressBackend{Service: &k8s.IngressServiceBackend{Name: jsii.String("flink-jobmanager"), Port: &k8s.ServiceBackendPort{Number: jsii.Number(8081)}}}}}}}},
+			Rules: &[]*k8s.IngressRule{{
+				Host: jsii.String("flink.local"),
+				Http: &k8s.HttpIngressRuleValue{
+					Paths: &[]*k8s.HttpIngressPath{{
+						Path:     jsii.String("/"),
+						PathType: jsii.String("Prefix"),
+						Backend: &k8s.IngressBackend{
+							Service: &k8s.IngressServiceBackend{
+								Name: jsii.String("flink-jobmanager"),
+								Port: &k8s.ServiceBackendPort{Number: jsii.Number(8081)},
+							},
+						},
+					}},
+				},
+			}},
 		},
 	})
 }
