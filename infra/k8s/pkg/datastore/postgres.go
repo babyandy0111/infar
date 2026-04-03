@@ -10,17 +10,27 @@ import (
 
 func CreatePostgreSQL(chart cdk8s.Chart) {
 	env := os.Getenv("INFAR_CLOUD_PROVIDER")
+	dbUser := os.Getenv("DB_USER")
+	dbName := os.Getenv("DB_NAME")
+
+	// Fallback 預設值
+	if dbUser == "" {
+		dbUser = "admin"
+	}
+	if dbName == "" {
+		dbName = "infar_db"
+	}
 
 	// 1. 雲端環境邏輯：建立對應外部 RDS 的橋樑
 	if env != "" && env != "local" {
 		endpoint := os.Getenv("DB_ENDPOINT")
 		if endpoint == "" {
-			endpoint = "rds-postgres.internal.aws" // 預設佔位符，由 Terraform 注入真實網址
+			endpoint = "rds-postgres.internal.aws"
 		}
 
 		k8s.NewKubeService(chart, jsii.String("postgres-cloud-svc"), &k8s.KubeServiceProps{
 			Metadata: &k8s.ObjectMeta{
-				Name:      jsii.String("postgres"), // 保持名稱一致，讓微服務無感
+				Name:      jsii.String("postgres"),
 				Namespace: jsii.String("infra"),
 			},
 			Spec: &k8s.ServiceSpec{
@@ -41,8 +51,8 @@ func CreatePostgreSQL(chart cdk8s.Chart) {
 			"fullnameOverride": "postgres",
 			"nameOverride":     "postgres",
 			"auth": map[string]interface{}{
-				"database":       "infar_db",
-				"username":       "admin",
+				"database":       dbName,
+				"username":       dbUser,
 				"existingSecret": "infra-secrets",
 				"secretKeys": map[string]interface{}{
 					"adminPasswordKey": "postgresql-password",

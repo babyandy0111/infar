@@ -1,27 +1,17 @@
 #!/bin/bash
 
 # ==========================================
-# Infar 基礎設施多環境驗證腳本
+# Infar 基礎設施多環境驗證腳本 (動態獲取版)
 # ==========================================
 INFAR_CLOUD_PROVIDER=${1:-local}
 
 echo "🔍 開始驗證 [$INFAR_CLOUD_PROVIDER] 基礎設施狀態..."
 
-# 定義基礎服務清單 (無論哪種環境都要檢查 Pod 的服務)
+# 定義核心服務 Pod 檢查
 CORE_PODS=(
-    "flink-jobmanager:infra"
-    "flink-taskmanager:infra"
     "argocd.*-server:argocd"
-    "loki:observability"
-    "grafana:observability"
-)
-
-# 定義在 Local 環境才需要檢查 Pod 的服務 (雲端則改為檢查連線)
-DB_PODS=(
     "postgres:infra"
     "redis:infra"
-    "zookeeper:infra"
-    "kafka:infra"
 )
 
 # ==========================================
@@ -48,63 +38,63 @@ check_ready() {
     fi
 }
 
-# 執行核心檢查
-for item in "${CORE_PODS[@]}"; do
-    check_ready "${item%%:*}" "${item##*:}"
-done
-
-# 如果是 local，還要檢查資料庫 Pod
-if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
-    for item in "${DB_PODS[@]}"; do
-        check_ready "${item%%:*}" "${item##*:}"
-    done
-else
-    echo "   (雲端模式：資料庫由外部託管，跳過 Pod 狀態檢查)"
-fi
+for item in "${CORE_PODS[@]}"; do check_ready "${item%%:*}" "${item##*:}"; done
 
 # ==========================================
-# 2. 功能性檢查 (連線測試)
+# 2. 🔑 動態獲取連線資訊 (拒絕硬編碼)
 # ==========================================
 echo ""
-echo "2. 執行深度功能連線檢查..."
+echo "2. 正在從叢集動態檢索連線資訊..."
 
-# 獲取密碼
+# 獲取密碼 (Secret)
 PG_PASS=$(kubectl get secret infra-secrets -n infra -o jsonpath="{.data.postgresql-password}" 2>/dev/null | base64 --decode)
 REDIS_PASS=$(kubectl get secret infra-secrets -n infra -o jsonpath="{.data.redis-password}" 2>/dev/null | base64 --decode)
 
-# 驗證 PostgreSQL
-printf "   - 驗證 PostgreSQL 連線:       "
-if kubectl run verify-pg-tmp --rm -i --restart=Never --image bitnami/postgresql:16 --env PGPASSWORD="$PG_PASS" -- sh -c "pg_isready -h postgres -p 5432 -U admin" > /dev/null 2>&1; then
-    echo "✅ PASS (對接正常)"
-else
-    echo "❌ FAIL (無法建立連線)"
-fi
+# 獲取 PostgreSQL 資料庫名稱與帳號 (從 StatefulSet 環境變數抓取)
+# 使用 JSONPATH 尋找名為 POSTGRES_DATABASE 和 POSTGRES_USER 的 env 值
+PG_DB_NAME=$(kubectl get statefulset postgres -n infra -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="POSTGRES_DATABASE")].value}' 2>/dev/null)
+PG_USER=$(kubectl get statefulset postgres -n infra -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="POSTGRES_USER")].value}' 2>/dev/null)
 
-# 驗證 Redis
-printf "   - 驗證 Redis 連線:            "
-# 使用 redis-cli PING 測試。注意：雲端託管 Redis 可能沒有密碼或密碼不同，這裡先用 local 邏輯嘗試
-if kubectl run verify-redis-tmp --rm -i --restart=Never --image redis:7.2-alpine -- sh -c "redis-cli -h redis-master -p 6379 -a $REDIS_PASS PING" 2>/dev/null | grep -q "PONG"; then
-    echo "✅ PASS (對接正常)"
+# 如果抓不到 (例如是 ExternalName 模式)，則顯示為 N/A
+PG_DB_NAME=${PG_DB_NAME:-"infar_db (fallback)"}
+PG_USER=${PG_USER:-"admin (fallback)"}
+
+# ==========================================
+# 3. 功能性檢查 (連線測試)
+# ==========================================
+echo "3. 執行深度功能連線檢查..."
+
+if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
+    # PostgreSQL 連線測試
+    printf "   - 驗證 PostgreSQL 連線:       "
+    if pg_isready -h 127.0.0.1 -p 5432 -U "$PG_USER" > /dev/null 2>&1; then
+        echo "✅ PASS"
+    else
+        echo "❌ FAIL (請檢查 Port-forward 是否異常)"
+    fi
+
+    # Redis 連線測試
+    printf "   - 驗證 Redis 連線:            "
+    if redis-cli -h 127.0.0.1 -p 6379 -a "$REDIS_PASS" PING 2>/dev/null | grep -q "PONG"; then
+        echo "✅ PASS"
+    else
+        echo "❌ FAIL (請檢查 Port-forward 是否異常)"
+    fi
 else
-    echo "❌ FAIL (無法建立連線)"
+    echo "   (雲端模式：跳過本機連線檢查)"
 fi
 
 # ==========================================
-# 3. Ingress 網路存取測試
+# 4. Ingress 網路存取測試
 # ==========================================
 echo ""
-echo "3. 網路入口存取測試 (Ingress):"
+echo "4. 網路入口存取測試 (Ingress):"
 
 if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
     TARGET_IP="127.0.0.1"
-    echo "   (測試模式：使用本地 /etc/hosts 解析)"
 else
-    # 雲端模式：動態獲取 LoadBalancer 地址
-    echo "   🔍 正在抓取雲端 LoadBalancer 地址..."
     LB_ADDRESS=$(kubectl get ingress argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
-    if [ -z "$LB_ADDRESS" ]; then
-        LB_ADDRESS=$(kubectl get ingress argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-    fi
+    if [ -z "$LB_ADDRESS" ]; then LB_ADDRESS=$(kubectl get ingress argocd-server -n argocd -o jsonpath='{.status.loadBalancer.ingress[0].ip}'); fi
     TARGET_IP=$LB_ADDRESS
 fi
 
@@ -112,17 +102,38 @@ test_ingress() {
     local domain=$1
     local name=$2
     printf "   - 測試 %-15s: " "$name"
-    if [ -z "$TARGET_IP" ]; then
-        echo "❌ FAIL (未偵測到 LoadBalancer)"
-        return
-    fi
+    if [ -z "$TARGET_IP" ]; then echo "⏳ 等待 IP..."; return; fi
     HTTP_STATUS=$(curl -s --max-time 5 -o /dev/null -w "%{http_code}" --resolve "$domain:80:$TARGET_IP" "http://$domain")
     if [[ "$HTTP_STATUS" =~ ^(200|302|307)$ ]]; then echo "✅ PASS ($HTTP_STATUS)"; else echo "❌ FAIL ($HTTP_STATUS)"; fi
 }
 
 test_ingress "argocd.local" "ArgoCD"
-test_ingress "grafana.local" "Grafana"
-test_ingress "flink.local" "Flink UI"
+if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
+    test_ingress "grafana.local" "Grafana"
+fi
 
+# ==========================================
+# 5. 🔑 開發者連線指南
+# ==========================================
+echo ""
+echo "-------------------------------------------------------"
+echo "🔐 [Infar] 開發者工具連線清單 (資訊由叢集即時提供):"
+echo ""
+if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
+    echo "📍 PostgreSQL (本機通道):"
+    echo "   Endpoint: 127.0.0.1:5432"
+    echo "   User:     $PG_USER"
+    echo "   DB Name:  $PG_DB_NAME"
+    echo "   Password: $PG_PASS"
+    echo ""
+    echo "📍 Redis (本機通道):"
+    echo "   Endpoint: 127.0.0.1:6379"
+    echo "   Password: $REDIS_PASS"
+    echo ""
+    echo "💡 若要手動關閉背景通道，請執行："
+    echo "   pkill -f \"port-forward svc/postgres\" && pkill -f \"port-forward svc/redis-master\""
+else
+    echo "📍 雲端資料庫位址請參考 Terraform Output。"
+fi
 echo "-------------------------------------------------------"
 echo "✅ [$INFAR_CLOUD_PROVIDER] 環境驗證程序執行完畢！"

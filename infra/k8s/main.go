@@ -77,7 +77,8 @@ func main() {
 	}
 
 	NewInfarDatastore(app, "01-datastore", commonProps)
-	NewInfarStreaming(app, "02-streaming", commonProps)
+	// 🚀 架構輕量化決策：暫停部署巨型串流模組 (Kafka, Flink)，改以 Redis Stream 取代
+	// NewInfarStreaming(app, "02-streaming", commonProps)
 	NewInfarObservability(app, "03-observability", commonProps)
 	NewInfarCicd(app, "04-cicd", commonProps)
 

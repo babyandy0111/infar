@@ -69,6 +69,15 @@ if [ "$INFAR_CLOUD_PROVIDER" != "local" ]; then
     popd > /dev/null
 else
     echo "💻 0. [本機模式] 檢查系統依賴..."
+    
+    # 確保 kubectl context 切換至 minikube
+    if kubectl config get-contexts minikube >/dev/null 2>&1; then
+        echo "   - 切換 kubectl context 至 minikube..."
+        kubectl config use-context minikube >/dev/null
+    else
+        echo "⚠️ 找不到 minikube context，請確認 minikube 已啟動！"
+    fi
+
     minikube addons enable ingress > /dev/null
 fi
 
@@ -79,11 +88,9 @@ echo "1. 建立與設定 Namespaces..."
 for ns in infra argocd observability linkerd-viz; do
     kubectl create namespace "$ns" --dry-run=client -o yaml | kubectl apply -f - > /dev/null
     
-    # 🚀 關鍵架構決策：只有 local 環境才啟用 Linkerd 自動注入
     if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
         kubectl label namespace "$ns" linkerd.io/inject=enabled --overwrite > /dev/null
     else
-        # 雲端環境移除標籤，避免啟動失敗
         kubectl label namespace "$ns" linkerd.io/inject- > /dev/null 2>&1
     fi
 done
@@ -99,15 +106,11 @@ if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
         kubectl apply --server-side -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.4.0/standard-install.yaml > /dev/null
         linkerd install --crds | kubectl apply -f -
         linkerd install --set proxyInit.runAsRoot=true | kubectl apply -f -
-        
-        echo "   - 等待 Linkerd 控制平面啟動..."
         linkerd check --wait 5m
-        
-        echo "   - 安裝 Linkerd Viz 視覺化擴展..."
         linkerd viz install | kubectl apply -f -
     fi
 else
-    echo "2. 跳過 Service Mesh 安裝 (雲端環境使用原生 Cloud Monitoring)..."
+    echo "2. 跳過 Service Mesh 安裝 (雲端環境模式)..."
 fi
 
 # ==========================================
@@ -127,7 +130,6 @@ kubectl apply --server-side --force-conflicts -f dist/
 # ==========================================
 # 4. 後續自動化設定
 # ==========================================
-# 只有 local 環境才需要匯入戰情室 (雲端環境 Grafana 將被閹割或移除)
 if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
     echo "4. 匯入 Grafana 戰情室..."
     ./import-dashboard.sh
@@ -136,8 +138,16 @@ if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
     TARGET_IP="127.0.0.1"
     if ! grep -q "argocd.local" /etc/hosts; then
         echo "🌐 更新 /etc/hosts (需要密碼)..."
-        echo "$TARGET_IP argocd.local grafana.local flink.local" | sudo tee -a /etc/hosts > /dev/null
+        echo "$TARGET_IP argocd.local grafana.local" | sudo tee -a /etc/hosts > /dev/null
     fi
+
+    echo "6. 🚀 建立本機資料庫捷徑 (Port-Forward)..."
+    # 先清理舊的，再啟動新的
+    pkill -f "port-forward svc/postgres" > /dev/null 2>&1
+    pkill -f "port-forward svc/redis-master" > /dev/null 2>&1
+    kubectl port-forward svc/postgres 5432:5432 -n infra > /dev/null 2>&1 &
+    kubectl port-forward svc/redis-master 6379:6379 -n infra > /dev/null 2>&1 &
+    echo "   ✅ PostgreSQL (5432) 與 Redis (6379) 已在背景連通。"
 else
     echo "4. 跳過戰情室匯入與 hosts 更新 (雲端環境配置)..."
 fi
@@ -146,8 +156,8 @@ echo "✅ 基礎設施 [$INFAR_CLOUD_PROVIDER] 已全自動同步完成！"
 
 if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
     echo "👉 ArgoCD URL: http://argocd.local (請確保已執行 minikube tunnel)"
+    echo "👉 Grafana URL: http://grafana.local"
 else
     echo "👉 雲端環境部署完成！請等待 Cloud LoadBalancer 建立。"
     echo "🔍 取得 ArgoCD 外部網址: kubectl get ingress argocd-server -n argocd"
-    echo "🔍 取得 Flink 外部網址:  kubectl get ingress flink-ui -n infra"
 fi
