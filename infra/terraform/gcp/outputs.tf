@@ -1,16 +1,17 @@
 output "kubernetes_endpoint" {
   description = "GKE Cluster Endpoint"
-  value       = module.gke.endpoint
+  value       = google_container_cluster.primary.endpoint
+  sensitive   = true
 }
 
 output "kubernetes_cluster_name" {
   description = "GKE Cluster Name"
-  value       = module.gke.name
+  value       = google_container_cluster.primary.name
 }
 
 output "configure_kubectl" {
   description = "設定 K8s 本機連線的方法"
-  value       = "gcloud container clusters get-credentials ${module.gke.name} --region ${var.region} --project ${var.project_id}"
+  value       = "gcloud container clusters get-credentials ${google_container_cluster.primary.name} --region ${var.region} --project ${var.project_id}"
 }
 
 output "db_endpoint" {

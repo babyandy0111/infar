@@ -29,6 +29,17 @@ echo "🚀 開始同步 K8s 基礎設施狀態 (目標環境: $INFAR_CLOUD_PROVI
 # ==========================================
 if [ "$INFAR_CLOUD_PROVIDER" != "local" ]; then
     echo "☁️ 0. [雲端模式] 啟動 Terraform 基礎設施引擎 ($INFAR_CLOUD_PROVIDER)..."
+
+    # GCP 專屬 API 預先開啟
+    if [ "$INFAR_CLOUD_PROVIDER" == "gcp" ]; then
+        echo "   - 正在啟動 GCP 必要 API (Compute, GKE, SQL, Redis)..."
+        gcloud services enable compute.googleapis.com \
+                               container.googleapis.com \
+                               sqladmin.googleapis.com \
+                               redis.googleapis.com \
+                               cloudresourcemanager.googleapis.com > /dev/null
+    fi
+
     TF_DIR="../terraform/$INFAR_CLOUD_PROVIDER"
     
     if [ ! -d "$TF_DIR" ]; then
