@@ -1,6 +1,6 @@
 # 建立 Cloud SQL (PostgreSQL)
 resource "google_sql_database_instance" "postgres" {
-  name             = "infar-db-instance"
+  name             = "infar-db-v2"
   database_version = "POSTGRES_16"
   region           = var.region
   project          = var.project_id

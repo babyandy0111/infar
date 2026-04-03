@@ -124,6 +124,8 @@ fi
 # 3. 狀態同步 (IaC Apply)
 # ==========================================
 echo "3. 生成 K8s YAML 並執行同步 (cdk8s)..."
+# 🚀 強化：清理舊的 YAML，避免「幽靈資源」殘留
+rm -rf dist/*.yaml
 go run main.go || exit 1
 
 helm repo add bitnami https://charts.bitnami.com/bitnami > /dev/null
@@ -154,8 +156,10 @@ fi
 echo "✅ 基礎設施 [$INFAR_CLOUD_PROVIDER] 已全自動同步完成！"
 
 echo "5. 🚀 建立本機資料庫捷徑 (Port-Forward)..."
-# 先清理舊的，再啟動新的
+# 🚀 強化清理：殺掉所有佔用 5432 或 6379 的本機進程 (包含之前的舊通道)
 pkill -f "port-forward" > /dev/null 2>&1
+lsof -ti:5432 | xargs kill -9 > /dev/null 2>&1
+lsof -ti:6379 | xargs kill -9 > /dev/null 2>&1
 
 if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
     kubectl port-forward svc/postgres 5432:5432 -n infra > /dev/null 2>&1 &

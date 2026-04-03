@@ -10,29 +10,41 @@ import (
 )
 
 func CreateArgoCD(chart cdk8s.Chart, password string) {
-	// 1. 將密碼加密 (ArgoCD 需要 bcrypt)
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		log.Fatalf("無法加密 ArgoCD 密碼: %v", err)
 	}
 	adminHash := string(hash)
 
-	// 2. 環境判斷
 	env := os.Getenv("INFAR_CLOUD_PROVIDER")
 	isGCP := env == "gcp"
 
-	// 3. 雲端適配設定
-	ingressClassName := "nginx"
-	var host *string
-
+	// 根據環境動態生成 Ingress 設定
+	var ingressValues map[string]interface{}
 	if isGCP {
-		ingressClassName = "gce"
-		host = nil // 雲端環境不綁定網域，直接認 IP
+		// 🚀 GCP 雲端極限設定：解決 GCE Health Check 失敗問題
+		ingressValues = map[string]interface{}{
+			"enabled":          true,
+			"ingressClassName": jsii.String("gce"),
+			"hosts":            []interface{}{}, // 徹底移除預設的 example.com
+			"https":            false,           // 雲端內部強迫走 HTTP
+			"annotations": map[string]interface{}{
+				"kubernetes.io/ingress.class": nil,
+			},
+			"paths":    []*string{jsii.String("/")},
+			"pathType": "Prefix",
+		}
 	} else {
-		host = jsii.String("argocd.local")
+		// 🏠 Local 模式：保留漂亮的虛擬網域
+		ingressValues = map[string]interface{}{
+			"enabled":          true,
+			"ingressClassName": jsii.String("nginx"),
+			"hostname":         jsii.String("argocd.local"),
+			"paths":            []*string{jsii.String("/")},
+			"pathType":         "Prefix",
+		}
 	}
 
-	// 4. 建立 ArgoCD Helm Chart
 	cdk8s.NewHelm(chart, jsii.String("argocd"), &cdk8s.HelmProps{
 		Chart:       jsii.String("argo/argo-cd"),
 		Version:     jsii.String("9.4.17"),
@@ -53,18 +65,7 @@ func CreateArgoCD(chart cdk8s.Chart, password string) {
 				"extraArgs": []*string{
 					jsii.String("--insecure"),
 				},
-				"ingress": map[string]interface{}{
-					"enabled":          true,
-					"ingressClassName": ingressClassName,
-					"hostname":         host,
-					"annotations": map[string]interface{}{
-						"kubernetes.io/ingress.class": nil, // 強制拔除預設的 nginx 標籤
-					},
-					"paths": []*string{
-						jsii.String("/"),
-					},
-					"pathType": "Prefix",
-				},
+				"ingress": ingressValues, // 🚀 注入動態生成的環境設定
 			},
 			"configs": map[string]interface{}{
 				"secret": map[string]interface{}{
