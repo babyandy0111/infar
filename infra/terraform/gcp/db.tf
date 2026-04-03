@@ -5,10 +5,10 @@ resource "google_sql_database_instance" "postgres" {
   region           = var.region
   project          = var.project_id
   
+  edition = "ENTERPRISE"
+  
   settings {
-    # 🚀 將版本設定放在 settings 內部，才能成功套用 db-f1-micro
-    edition = "ENTERPRISE"
-    tier    = "db-f1-micro" 
+    tier = "db-f1-micro" 
     
     ip_configuration {
       ipv4_enabled                                  = false
@@ -25,9 +25,20 @@ resource "google_sql_database_instance" "postgres" {
   }
 
   deletion_protection = false
-
-  # 必須等待網路隧道 (Service Networking) 建立完畢
   depends_on = [google_service_networking_connection.default]
+}
+
+# 🚀 新增：自動建立資料庫 (Database)
+resource "google_sql_database" "infar_db" {
+  name     = var.db_name
+  instance = google_sql_database_instance.postgres.name
+}
+
+# 🚀 新增：自動建立使用者 (User) 並賦予密碼
+resource "google_sql_user" "infar_user" {
+  name     = var.db_user
+  instance = google_sql_database_instance.postgres.name
+  password = var.db_password
 }
 
 # 建立 Redis (Memorystore)
