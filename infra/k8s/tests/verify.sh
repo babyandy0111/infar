@@ -8,11 +8,18 @@ INFAR_CLOUD_PROVIDER=${1:-local}
 echo "🔍 開始驗證 [$INFAR_CLOUD_PROVIDER] 基礎設施狀態..."
 
 # 定義核心服務 Pod 檢查
-CORE_PODS=(
-    "argocd.*-server:argocd"
-    "postgres:infra"
-    "redis:infra"
-)
+if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
+    CORE_PODS=(
+        "argocd.*-server:argocd"
+        "postgres:infra"
+        "redis:infra"
+    )
+else
+    CORE_PODS=(
+        "argocd.*-server:argocd"
+        "jump:infra"
+    )
+fi
 
 # ==========================================
 # 1. 檢查 Pods 狀態 (Ready Check)
@@ -50,14 +57,18 @@ echo "2. 正在從叢集動態檢索連線資訊..."
 PG_PASS=$(kubectl get secret infra-secrets -n infra -o jsonpath="{.data.postgresql-password}" 2>/dev/null | base64 --decode)
 REDIS_PASS=$(kubectl get secret infra-secrets -n infra -o jsonpath="{.data.redis-password}" 2>/dev/null | base64 --decode)
 
-# 獲取 PostgreSQL 資料庫名稱與帳號 (從 StatefulSet 環境變數抓取)
-# 使用 JSONPATH 尋找名為 POSTGRES_DATABASE 和 POSTGRES_USER 的 env 值
-PG_DB_NAME=$(kubectl get statefulset postgres -n infra -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="POSTGRES_DATABASE")].value}' 2>/dev/null)
-PG_USER=$(kubectl get statefulset postgres -n infra -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="POSTGRES_USER")].value}' 2>/dev/null)
+# 獲取 PostgreSQL 資料庫名稱與帳號
+if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
+    PG_DB_NAME=$(kubectl get statefulset postgres -n infra -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="POSTGRES_DATABASE")].value}' 2>/dev/null)
+    PG_USER=$(kubectl get statefulset postgres -n infra -o jsonpath='{.spec.template.spec.containers[0].env[?(@.name=="POSTGRES_USER")].value}' 2>/dev/null)
+else
+    # 雲端模式：嘗試從 .env 或 預設值 獲取 (因為雲端沒有 StatefulSet Pod)
+    PG_DB_NAME=$DB_NAME
+    PG_USER=$DB_USER
+fi
 
-# 如果抓不到 (例如是 ExternalName 模式)，則顯示為 N/A
-PG_DB_NAME=${PG_DB_NAME:-"infar_db (fallback)"}
-PG_USER=${PG_USER:-"admin (fallback)"}
+PG_DB_NAME=${PG_DB_NAME:-"infar_db"}
+PG_USER=${PG_USER:-"admin"}
 
 # ==========================================
 # 3. 功能性檢查 (連線測試)

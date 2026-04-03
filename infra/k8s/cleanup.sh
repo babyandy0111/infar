@@ -78,6 +78,10 @@ else
         read -p "⚠️ 確定要執行 terraform destroy 嗎? [y/N]: " confirm_destroy
         if [[ "$confirm_destroy" =~ ^([yY][eE][sS]|[yY])$ ]]; then
             pushd "$TF_DIR" > /dev/null
+            # 🚀 強化銷毀：帶入必要變數
+            export TF_VAR_db_user=$DB_USER
+            export TF_VAR_db_password=$DB_PASSWORD
+            export TF_VAR_db_name=$DB_NAME
             terraform destroy -auto-approve
             popd > /dev/null
             echo "✅ 雲端基礎設施已成功銷毀。"
