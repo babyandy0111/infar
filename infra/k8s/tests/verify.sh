@@ -64,24 +64,28 @@ PG_USER=${PG_USER:-"admin (fallback)"}
 # ==========================================
 echo "3. 執行深度功能連線檢查..."
 
-if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
-    # PostgreSQL 連線測試
-    printf "   - 驗證 PostgreSQL 連線:       "
+# 測試 PostgreSQL (不分環境，皆透過 127.0.0.1 測試)
+printf "   - 驗證 PostgreSQL 連線:       "
+if command -v pg_isready &> /dev/null; then
     if pg_isready -h 127.0.0.1 -p 5432 -U "$PG_USER" > /dev/null 2>&1; then
         echo "✅ PASS"
     else
-        echo "❌ FAIL (請檢查 Port-forward 是否異常)"
+        echo "❌ FAIL (無法建立連線，請確認 setup.sh 通道已開啟)"
     fi
+else
+    echo "⚠️ SKIP (本機未安裝 pg_isready 工具)"
+fi
 
-    # Redis 連線測試
-    printf "   - 驗證 Redis 連線:            "
+# 測試 Redis (不分環境，皆透過 127.0.0.1 測試)
+printf "   - 驗證 Redis 連線:            "
+if command -v redis-cli &> /dev/null; then
     if redis-cli -h 127.0.0.1 -p 6379 -a "$REDIS_PASS" PING 2>/dev/null | grep -q "PONG"; then
         echo "✅ PASS"
     else
-        echo "❌ FAIL (請檢查 Port-forward 是否異常)"
+        echo "❌ FAIL (無法建立連線，請確認 setup.sh 通道已開啟)"
     fi
 else
-    echo "   (雲端模式：跳過本機連線檢查)"
+    echo "⚠️ SKIP (本機未安裝 redis-cli 工具)"
 fi
 
 # ==========================================
@@ -119,21 +123,15 @@ echo ""
 echo "-------------------------------------------------------"
 echo "🔐 [Infar] 開發者工具連線清單 (資訊由叢集即時提供):"
 echo ""
+echo "📍 資料庫通道 (透過 127.0.0.1 直達，通道已由 setup.sh 自動開啟):"
+echo "   - PostgreSQL: 127.0.0.1:5432 (User: $PG_USER, DB: $PG_DB_NAME, Pass: $PG_PASS)"
+echo "   - Redis:      127.0.0.1:6379 (Pass: $REDIS_PASS)"
+echo ""
+echo "💡 若要手動關閉背景通道，請執行："
 if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
-    echo "📍 PostgreSQL (本機通道):"
-    echo "   Endpoint: 127.0.0.1:5432"
-    echo "   User:     $PG_USER"
-    echo "   DB Name:  $PG_DB_NAME"
-    echo "   Password: $PG_PASS"
-    echo ""
-    echo "📍 Redis (本機通道):"
-    echo "   Endpoint: 127.0.0.1:6379"
-    echo "   Password: $REDIS_PASS"
-    echo ""
-    echo "💡 若要手動關閉背景通道，請執行："
     echo "   pkill -f \"port-forward svc/postgres\" && pkill -f \"port-forward svc/redis-master\""
 else
-    echo "📍 雲端資料庫位址請參考 Terraform Output。"
+    echo "   pkill -f \"port-forward deployment/jump\""
 fi
 echo "-------------------------------------------------------"
 echo "✅ [$INFAR_CLOUD_PROVIDER] 環境驗證程序執行完畢！"

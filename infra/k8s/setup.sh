@@ -56,14 +56,17 @@ if [ "$INFAR_CLOUD_PROVIDER" != "local" ]; then
     echo "   - 正在自動抓取雲端資源 Endpoint..."
     export DB_ENDPOINT=$(terraform output -raw db_endpoint)
     export REDIS_ENDPOINT=$(terraform output -raw redis_endpoint)
-    
+    # 自動切換 kubectl 到雲端叢集
     echo "   - 更新 K8s 叢集連線憑證..."
+    # 確保安裝 GKE 插件 (針對 Mac 使用者)
     if [ "$INFAR_CLOUD_PROVIDER" == "gcp" ]; then
         gcloud components install gke-gcloud-auth-plugin --quiet > /dev/null 2>&1
+        export USE_GKE_GCLOUD_AUTH_PLUGIN=True
     fi
     CONF_CMD=$(terraform output -raw configure_kubectl)
-    eval "$CONF_CMD"
-    
+    echo "   - 執行: $CONF_CMD"
+    eval "$CONF_CMD" > /dev/null
+
     echo "----------------------------------------"
     echo "🌐 雲端連線資訊 (已成功抓取):"
     echo "   - Postgres: $DB_ENDPOINT"
@@ -144,19 +147,28 @@ if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
         echo "🌐 更新 /etc/hosts (需要密碼)..."
         echo "$TARGET_IP argocd.local grafana.local" | sudo tee -a /etc/hosts > /dev/null
     fi
-
-    echo "6. 🚀 建立本機資料庫捷徑 (Port-Forward)..."
-    # 先清理舊的，再啟動新的
-    pkill -f "port-forward svc/postgres" > /dev/null 2>&1
-    pkill -f "port-forward svc/redis-master" > /dev/null 2>&1
-    kubectl port-forward svc/postgres 5432:5432 -n infra > /dev/null 2>&1 &
-    kubectl port-forward svc/redis-master 6379:6379 -n infra > /dev/null 2>&1 &
-    echo "   ✅ PostgreSQL (5432) 與 Redis (6379) 已在背景連通。"
 else
     echo "4. 跳過戰情室匯入與 hosts 更新 (雲端環境配置)..."
 fi
 
 echo "✅ 基礎設施 [$INFAR_CLOUD_PROVIDER] 已全自動同步完成！"
+
+echo "5. 🚀 建立本機資料庫捷徑 (Port-Forward)..."
+# 先清理舊的，再啟動新的
+pkill -f "port-forward" > /dev/null 2>&1
+
+if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
+    kubectl port-forward svc/postgres 5432:5432 -n infra > /dev/null 2>&1 &
+    kubectl port-forward svc/redis-master 6379:6379 -n infra > /dev/null 2>&1 &
+    echo "   ✅ PostgreSQL (5432) 與 Redis (6379) 已透過 Service 在背景連通。"
+else
+    echo "   - 正在等待雲端跳板機 (Jump Pod) 啟動..."
+    kubectl wait --for=condition=available deployment/jump -n infra --timeout=60s > /dev/null 2>&1
+    echo "   - 正在建立雲端跳板通道..."
+    kubectl port-forward deployment/jump 5432:5432 -n infra > /dev/null 2>&1 &
+    kubectl port-forward deployment/jump 6379:6379 -n infra > /dev/null 2>&1 &
+    echo "   ✅ 雲端資料庫已透過 Jump Pod 在本機 (127.0.0.1) 背景連通。"
+fi
 
 if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
     echo "👉 ArgoCD URL: http://argocd.local (請確保已執行 minikube tunnel)"

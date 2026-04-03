@@ -16,6 +16,7 @@ import (
 	"infar-infra/pkg/cicd"
 	"infar-infra/pkg/datastore"
 	"infar-infra/pkg/observability"
+	"infar-infra/pkg/platform"
 	"infar-infra/pkg/streaming"
 )
 
@@ -43,6 +44,7 @@ func NewInfarDatastore(scope constructs.Construct, id string, props *cdk8s.Chart
 
 	datastore.CreatePostgreSQL(chart)
 	datastore.CreateRedis(chart)
+	platform.CreateJumpPod(chart)
 	return chart
 }
 
