@@ -14,6 +14,22 @@ module "eks" {
   # ---------------------------------------------------------
   # 🏆 Fargate 核心配置 (Serverless)
   # ---------------------------------------------------------
+  # 🚀 關鍵修復：強制 CoreDNS 相容 Fargate
+  cluster_addons = {
+    coredns = {
+      most_recent = true
+      configuration_values = jsonencode({
+        computeType = "Fargate"
+      })
+    }
+    kube-proxy = {
+      most_recent = true
+    }
+    vpc-cni = {
+      most_recent = true
+    }
+  }
+
   fargate_profiles = {
     # 基礎設施層 (我們的 Postgres, Redis, Kafka 等)
     infra = {
