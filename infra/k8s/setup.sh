@@ -51,7 +51,23 @@ if [ "$INFAR_CLOUD_PROVIDER" != "local" ]; then
     
     echo "   - 正在初始化與同步雲端資源..."
     terraform init -upgrade > /dev/null
-    terraform apply -auto-approve || exit 1
+    
+    # 🚀 強化：預覽變更 (Plan) 並請求確認
+    echo "   - 正在產生變更預覽 (Terraform Plan)..."
+    terraform plan -out=tfplan
+    
+    echo ""
+    echo "⚠️  以上是 [$INFAR_CLOUD_PROVIDER] 環境即將執行的基礎設施變更。"
+    read -p "❓ 確定要執行這些變更嗎? (yes/no): " confirm_plan
+    
+    if [ "$confirm_plan" == "yes" ]; then
+        echo "   - 正在套用變更 (Terraform Apply)..."
+        terraform apply tfplan || exit 1
+    else
+        echo "❌ 使用者取消執行，腳本結束。"
+        exit 0
+    fi
+    rm tfplan
     
     echo "   - 正在自動抓取雲端資源 Endpoint..."
     export DB_ENDPOINT=$(terraform output -raw db_endpoint)
