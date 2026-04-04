@@ -69,6 +69,24 @@ if [ "$INFAR_CLOUD_PROVIDER" != "local" ]; then
     echo "   - 執行: $CONF_CMD"
     eval "$CONF_CMD" > /dev/null
 
+    # AWS 專屬：安裝 Load Balancer Controller (Fargate 必須)
+    if [ "$INFAR_CLOUD_PROVIDER" == "aws" ]; then
+        echo "   - [AWS] 正在安裝 AWS Load Balancer Controller..."
+        LBC_ROLE_ARN=$(terraform output -raw aws_lbc_role_arn)
+        helm repo add eks https://aws.github.io/eks-charts > /dev/null 2>&1
+        helm repo update eks > /dev/null 2>&1
+        helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
+            -n kube-system \
+            --set clusterName=$TF_VAR_cluster_name \
+            --set serviceAccount.create=true \
+            --set serviceAccount.name=aws-load-balancer-controller \
+            --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$LBC_ROLE_ARN \
+            --set region=$TF_VAR_region \
+            --set vpcId=$(terraform output -raw vpc_id) \
+            > /dev/null 2>&1
+        echo "   ✅ AWS Load Balancer Controller 已啟動。"
+    fi
+
     echo "----------------------------------------"
     echo "🌐 雲端連線資訊 (已成功抓取):"
     echo "   - Postgres: $DB_ENDPOINT"

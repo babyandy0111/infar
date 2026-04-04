@@ -7,6 +7,11 @@ output "configure_kubectl" {
   value       = "aws eks update-kubeconfig --region ${var.region} --name ${var.cluster_name}"
 }
 
+output "vpc_id" {
+  description = "The ID of the VPC"
+  value       = module.vpc.vpc_id
+}
+
 output "db_endpoint" {
   # RDS 產出的 endpoint 格式通常是 host:port，我們只需要 host
   value = split(":", aws_db_instance.postgres.endpoint)[0]
