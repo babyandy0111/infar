@@ -63,6 +63,8 @@ if [ "$INFAR_CLOUD_PROVIDER" != "local" ]; then
         gcloud components install gke-gcloud-auth-plugin --quiet > /dev/null 2>&1
         export USE_GKE_GCLOUD_AUTH_PLUGIN=True
     fi
+    
+    # 執行 Terraform 輸出的認證指令 (gcloud 或 aws eks)
     CONF_CMD=$(terraform output -raw configure_kubectl)
     echo "   - 執行: $CONF_CMD"
     eval "$CONF_CMD" > /dev/null
