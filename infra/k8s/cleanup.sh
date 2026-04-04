@@ -15,6 +15,14 @@ if [ -f .env ]; then
     export $(grep -v '^#' .env | xargs)
     export TF_VAR_project_id=$GCP_PROJECT_ID
     export TF_VAR_region=$GCP_REGION
+    export TF_VAR_db_user=$DB_USER
+    export TF_VAR_db_password=$DB_PASSWORD
+    export TF_VAR_db_name=$DB_NAME
+
+    if [ "$INFAR_CLOUD_PROVIDER" == "aws" ]; then
+        export TF_VAR_region=$AWS_REGION
+        export TF_VAR_cluster_name=$AWS_CLUSTER_NAME
+    fi
 fi
 
 # ==========================================
