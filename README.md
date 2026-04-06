@@ -1,173 +1,149 @@
 # Infar：企業級多雲微服務部署與開發平台
 
-本專案是一個集成了 **基礎設施即代碼 (IaC)** 與 **高效能微服務架構** 的現代化平台。我們透過 **cdk8s (Go)**、**Terraform** 與 **go-zero** 打造了一個從本機開發到雲端生產環境（AWS/GCP）全自動化的開發體驗。
+本專案提供一個從底層雲端基礎設施（Terraform + cdk8s）到上層微服務應用（go-zero + gRPC）的完整解決方案。我們致力於實現「本機開發與雲端生產環境的一致性」，並透過高度自動化提升開發體驗。
 
 ---
 
-## 🏗 1. 全域架構總覽
+## 🏗 1. 全域架構與目錄結構 (Architecture & Structure)
 
-### 1.1 核心技術棧
-*   **Infrastructure**: Terraform (雲端資源), cdk8s (K8s 資源物件定義), Helm (組件安裝)。
-*   **Backend**: go-zero (微服務框架), gRPC (內部通訊), RESTful (外部網關)。
-*   **Database**: PostgreSQL (主資料庫), Redis Stack (快取與訊息佇列)。
-*   **Observability**: PLG Stack (Prometheus, Loki, Grafana), Linkerd (Service Mesh)。
+### 1.1 技術棧 (Tech Stack)
+*   **基礎設施 (IaC)**: Terraform (雲資源), cdk8s (Go 語言定義 K8s), Helm。
+*   **後端框架 (Backend)**: go-zero (微服務大腦), gRPC (內部通訊), JWT (授權)。
+*   **資料儲存 (Storage)**: PostgreSQL (主庫), Redis Stack (快取/MQ)。
+*   **可觀測性 (Observability)**: Prometheus, Loki, Grafana (PLG Stack), Linkerd Service Mesh。
 
-### 1.2 專案目錄結構詳解
+### 1.2 專案目錄樹
 ```text
 /
 ├── infra/                          # 【基礎設施層】
-│   ├── k8s/                        # K8s 資源定義與部署
-│   │   ├── main.go                 # cdk8s 入口程式：定義 Deployment, Service, Ingress
-│   │   ├── pkg/                    # 模組化 K8s 組件 (CICD, Datastore, Observability, Platform)
-│   │   ├── dist/                   # 自動生成的 K8s YAML 檔案夾 (由 cdk8s 產出)
-│   │   ├── setup.sh                # 🚀 環境部署總指揮：自動切換雲端與本地配置
-│   │   ├── cleanup.sh              # 🧹 資源回收總指揮：徹底清理雲端殘留
-│   │   ├── .env                    # 環境變數設定檔 (需根據 .env.example 建立)
-│   │   └── tests/                  # 驗證腳本：檢查 K8s 元件健康度與 DB 連通性
-│   └── terraform/                  # 雲端資源管理
-│       ├── aws/                    # EKS Fargate + RDS v2 (Serverless 方案)
-│       └── gcp/                    # GKE Autopilot + Cloud SQL (Serverless 方案)
+│   ├── k8s/                        # K8s 資源定義與部署中心
+│   │   ├── main.go                 # cdk8s 入口：定義 Deployment, Service, Ingress 邏輯
+│   │   ├── pkg/                    # 模組化組件 (CICD, Datastore, Observability, Platform)
+│   │   ├── dist/                   # (Auto-gen) 由 cdk8s 產出的最終 K8s YAML
+│   │   ├── setup.sh                # 🚀 部署總指揮：自動切換雲端與本地配置 (含 Terraform)
+│   │   ├── cleanup.sh              # 🧹 清理總指揮：徹底銷毀雲端資源避免計費
+│   │   ├── .env                    # 環境變數 (需手動從 .env.example 複製並修改)
+│   │   └── tests/                  # 驗證腳本：檢查 Pods 健康度與資料庫連通性
+│   └── terraform/                  # 雲端 IaC 定義 (IaC)
+│       ├── aws/                    # EKS Fargate + RDS v2 + ElastiCache (Serverless)
+│       └── gcp/                    # GKE Autopilot + Cloud SQL + Memorystore
 ├── backend/                        # 【後端應用層】
-│   ├── services/                   # 各個獨立微服務
-│   │   └── user/                   # 使用者服務 (包含 api, rpc, model 三層)
-│   ├── dev.sh                      # 🛠 開發者神器：一鍵啟動所有服務、自動修復通道
-│   ├── init.sql                    # 🗄️ 全域資料庫初始化腳本
-│   └── go.mod                      # 後端統一依賴管理 (Module: infar)
-└── frontend/                       # 【前端應用層】
+│   ├── services/                   # 微服務叢集 (如 user, order 等)
+│   │   └── user/                   # 使用者服務
+│   │       ├── api/                # 對外 RESTful Gateway (含 Swagger docs)
+│   │       ├── rpc/                # 對內 gRPC 業務邏輯
+│   │       └── model/              # 資料庫對應層 (含客製化 Postgres 邏輯)
+│   ├── dev.sh                      # 🛠 開發者神器：一鍵啟動所有服務、自動清理 Port
+│   ├── init.sql                    # 🗄️ 全域資料庫初始化定義 (含 RBAC 預設資料)
+│   ├── go.mod                      # 後端統一依賴管理 (Module: infar)
+│   └── go.sum                      # 依賴版本鎖定
+└── frontend/                       # 【前端應用層 - 開發中】
 ```
 
 ---
 
 ## 🛠 2. 基礎設施部署指南 (Infrastructure Guide)
 
-我們支援三種環境：**Local (Minikube)**、**AWS (EKS)**、**GCP (GKE)**。系統會根據參數自動切換「託管服務」與「自建容器」。
+我們支援 **Local**, **AWS**, **GCP** 三種環境，透過 `setup.sh` 實現環境對接。
 
-### 2.1 本機開發模式 (Local Mode)
-*   **啟動要求**：安裝 Minikube 並執行 `sudo minikube tunnel` (另開視窗)。
-*   **一鍵部署**：
+### 2.1 本機開發環境 (Local Mode)
+*   **叢集工具**: Minikube。
+*   **重要前置**: 在獨立視窗執行 `sudo minikube tunnel` 以處理 Ingress 流量。
+*   **一鍵初始化**:
     ```bash
     cd infra/k8s
     ./setup.sh local
     ```
-*   **特性**：自動安裝 Linkerd Mesh、佈署容器版 Postgres/Redis、匯入 Grafana 戰情室。
+*   **功能特性**: 自動安裝 Linkerd Mesh、佈署容器版 DB/Redis、匯入 7 大 Grafana 戰情室。
 
-### 2.2 雲端生產模式 (AWS/GCP Mode)
-*   **部署指令**：`./setup.sh aws` 或 `./setup.sh gcp`。
-*   **安全性 (Plan & Confirm)**：
-    1.  腳本會先跑 `terraform plan` 讓你預覽雲端變更（例如是否會誤刪資料庫）。
-    2.  必須輸入 **`yes`** 才會執行真正的 `terraform apply`。
-*   **連線神器 (Jump Pod)**：
-    雲端資料庫位於私有網路，腳本會自動在 K8s 內啟動一個 **Jump Pod** 並在本機建立 Tunnel，讓開發者永遠連線 `127.0.0.1:5432` 即可直達雲端 RDS/Cloud SQL。
+### 2.2 雲端生產環境 (AWS/GCP Mode)
+*   **部署指令**: `./setup.sh aws` 或 `./setup.sh gcp`。
+*   **安全預覽機制 (Plan & Confirm)**:
+    1. 腳本會自動執行 `terraform plan` 並列出變更。
+    2. **強制手動確認**: 必須輸入 `yes` 才會執行 `apply`，防止誤刪正式環境資料。
+*   **資料庫存取 (Jump Pod)**:
+    雲端資料庫位於私有網路。`setup.sh` 會自動佈署一個 **Jump Pod** 並建立隧道。開發者無論在本地還是雲端，Host 統一連線 `127.0.0.1:5432` 即可。
 
-### 2.3 環境清理 (Cleanup)
-測試結束後，請務必執行清理，避免產生高額帳單：
-```bash
-./cleanup.sh aws   # 會自動銷毀 VPC, EKS, RDS, ElastiCache 等
-```
+### 2.3 環境驗證與清理
+*   **驗證**: `./tests/verify.sh local` (檢查 Pod 狀態、資料庫讀寫、Ingress 連通性)。
+*   **清理**: `./cleanup.sh aws` (強制銷毀所有 VPC, EKS, RDS, EIP 資源)。
 
 ---
 
 ## 🐹 3. Backend 微服務開發指南 (go-zero)
 
-### 3.1 微服務三層架構
-每個微服務（如 `user`）都必須遵守以下結構：
-1.  **`api/` (Gateway 層)**：處理 HTTP/JWT，透過 gRPC 呼叫內層。
-2.  **`rpc/` (Logic 層)**：處理核心商業邏輯與資料庫互動。
-3.  **`model/` (Data 層)**：對應資料表，具備 Redis 快取機制。
+### 3.1 👨‍💻 開發者關注清單 (The Touch List)
+開發新功能時，你 **只需要** 關注以下檔案，其餘由工具生成：
 
-### 3.2 👨‍💻 開發者關注清單 (The Touch List)
-開發新功能時，你**只需要**動到以下檔案：
-
-| 檔案類型 | 檔案路徑範例 | 作用 |
+| 檔案類型 | 範例路徑 | 作用 |
 | :--- | :--- | :--- |
 | **1. API 契約** | `api/desc/*.api` | 定義路由、參數、JWT 規則 |
-| **2. RPC 契約** | `rpc/pb/*.proto` | 定義 gRPC 介面與資料結構 |
-| **3. 業務大腦** | `rpc/internal/logic/*.go` | **重點：** 寫 SQL 操作與商業規則 |
-| **4. 路由轉發** | `api/internal/logic/*.go` | 調用 RPC 客戶端並組裝回傳值 |
-| **5. 依賴注入** | `*/internal/svc/servicecontext.go` | 在此實例化 Model 與 RPC Client |
-| **6. 客製 SQL** | `model/*model.go` | **Postgres 專屬：** 實作 `RETURNING id` 等語法 |
+| **2. RPC 契約** | `rpc/pb/*.proto` | 定義 gRPC 介面與資料編號 |
+| **3. 業務大腦** | `rpc/internal/logic/*.go` | **核心：** 實作 SQL 操作與商業規則 |
+| **4. 網關轉發** | `api/internal/logic/*.go` | 解析 JWT、呼叫 RPC 並組裝回傳值 |
+| **5. 依賴注入** | `*/internal/svc/servicecontext.go` | 實例化 Model 與 RPC 客戶端 |
+| **6. 客製 SQL** | `model/*model.go` | **重點：** 實作 Postgres 專用語法 (如 Returning ID) |
 
-### 3.3 新增服務標準流程 (SOP)
-假設你要新增一個名為 `order` 的服務，請嚴格執行以下步驟：
+### 3.2 新增服務標準 SOP (以 `order` 服務為例)
 
-#### Step 1: 資料庫準備
-1.  修改 `backend/init.sql` 加入 `orders` 表定義，並匯入資料庫。
-2.  **生成 Model 代碼** (在 `backend/` 目錄執行)：
-    ```bash
-    goctl model pg datasource \
-      -url "postgres://infar_admin:InfarDbPass123@127.0.0.1:5432/infar_db?sslmode=disable" \
-      -t "orders" \
-      -dir services/order/model -c
-    ```
+#### Step 1: 資料庫與 Model
+1. 修改 `backend/init.sql` 加表，匯入 DB：
+   ```bash
+   kubectl exec -i postgres-0 -c postgresql -n infra -- env PGPASSWORD=InfarDbPass123 psql -U infar_admin -d infar_db < backend/init.sql
+   ```
+2. 生成 Model (在 `backend/` 目錄)：
+   ```bash
+   goctl model pg datasource -url "postgres://..." -t "orders" -dir services/order/model -c
+   ```
 
-#### Step 2: 定義並生成 RPC 服務
-1.  建立 `backend/services/order/rpc/pb/order.proto` 定義介面。
-2.  **生成 RPC 代碼** (在 `rpc/` 目錄執行)：
-    ```bash
-    cd services/order/rpc
-    goctl rpc protoc pb/order.proto --go_out=. --go-grpc_out=. --zrpc_out=.
-    ```
+#### Step 2: 定義並生成 RPC 服務 (於 `services/your_service/rpc` 目錄執行)
+1.  **快速產出模版**: 執行 `goctl rpc template -o pb/order.proto`。
+2.  **修改定義**: 編輯 `pb/order.proto`。
+3.  **生成 Go 代碼**: `goctl rpc protoc pb/order.proto --go_out=. --go-grpc_out=. --zrpc_out=.`。
+4.  **⚠️ 習慣性清理**: 執行 `rm pb.go etc/pb.yaml` 以免編譯報錯。
 
-#### Step 3: 定義並生成 API 網關
-1.  建立 `backend/services/order/api/desc/order.api` 定義路由。
-2.  **生成 API 代碼** (在 `api/` 目錄執行)：
-    ```bash
-    cd ../api # 進入 services/order/api
-    goctl api go -api desc/order.api -dir .
-    ```
+#### Step 3: 定義並生成 API 網關 (於 `services/your_service/api` 目錄執行)
+1.  **快速產出模版**: 執行 `goctl api template -o desc/order.api`。
+2.  **修改定義**: 編輯 `desc/order.api`。
+3.  **生成 Go 代碼**: `goctl api go -api desc/order.api -dir .`。
 
-#### Step 4: 注入依賴與實作 (關鍵步驟)
-1.  **整理依賴**：在 `backend/` 執行 `go mod tidy`。
-2.  **注入 Model**：修改 `rpc/internal/svc/servicecontext.go` 注入 `OrdersModel`。
-3.  **注入 RPC Client**：修改 `api/internal/svc/servicecontext.go` 注入 `orderclient.Order`。
-4.  **寫代碼**：在 `rpc/internal/logic/` 寫入 SQL 邏輯，在 `api/internal/logic/` 呼叫 RPC。
-#### Step 5: 納入自動化體系
-1.  **修改 `backend/dev.sh`**：加入啟動 `order-rpc` 與 `order-api` 的指令。
-2.  **修改 `infra/k8s/main.go`**：加入 cdk8s 部署定義，確保雲端與 Local K8s 都能跑起來。
-
-#### Step 6: 生成 API 文檔
-1.  **自動生成 Swagger** (在 `api/` 目錄執行)：
-    ```bash
-    goctl api swagger -api desc/order.api -dir doc
-    ```
-2.  **預覽文件**：將 `doc/*.json` 內容貼至 [Swagger Editor](https://editor.swagger.io/) 或使用 VS Code 插件查看。
+#### Step 4: 實作邏輯
+1. 在 `rpc/internal/svc/servicecontext.go` 初始化 Model。
+2. 在 `logic/` 目錄撰寫你的業務程式碼。
 
 ---
 
-## 🚀 4. 日常開發運維指令
+## 🚀 4. 日常開發運維指令 (DevX)
 
-### 4.1 極速啟動開發環境
-...
-### 4.2 深度驗證與檢測
-...
-### 4.3 API 文檔管理
-*   **生成最新文檔**：進入各服務 `api/` 目錄執行 `goctl api swagger ...`。
-*   **全域文檔匯總**：建議未來可導入 Swagger UI 整合至網關中。
-
+### 4.1 智慧啟動神器 (`dev.sh`)
+進入 `backend/` 目錄執行：
 ```bash
 ./dev.sh
 ```
-*   **它會幫你做什麼？**
-    *   自動偵測並恢復 Postgres/Redis 的 K8s 通道。
-    *   並行啟動所有 RPC 與 API 服務。
-    *   日誌即時噴發在控制台，方便除錯。
-    *   **按下 Ctrl+C** 時，自動殺掉所有子程序，絕不佔用 Port。
+*   **自動化流程**: 
+    1. **暴力清場**: 自動殺掉佔用 8888, 9090 的舊程序，解決 `Address already in use`。
+    2. **通道修復**: 自動檢查並恢復 K8s 內的 Postgres/Redis 連線。
+    3. **文檔同步**: 自動掃描 Go 註解並產生 Swagger JSON。
+    4. **並行啟動**: 同時跑起所有的 RPC 與 API 服務。
+    5. **秒殺終止**: 按下 **一次 Ctrl+C**，透過 **PGID (Process Group)** 機制瞬間清空所有子程序，絕不殘留。
 
-### 4.2 深度驗證與檢測
-```bash
-cd infra/k8s
-./tests/verify.sh local
-```
-*   此腳本會檢測所有 Pod 狀態、測試 Ingress 是否通暢、測試資料庫是否可寫入。
+### 4.2 API 文檔中心 (Swagger UI)
+啟動 `./dev.sh` 後，直接存取：
+👉 **http://127.0.0.1:8888/swagger**
+*   **Authorize**: 直接貼入 JWT Token 即可進行線上調試。
+*   **Tags**: 支援自定義分組（在 Handler 使用 `@Tags` 註解）。
 
 ---
 
-## 💡 5. 開發注意事項與陷阱 (Tips)
+## 💡 5. 開發陷阱與注意事項 (Tips)
 
-1.  **統一連線地址**：程式碼中資料庫 Host 永遠寫 `127.0.0.1`，其餘由 `setup.sh` 或 `dev.sh` 處理。
-2.  **Postgres ID 回傳**：Postgres 不支援 `LastInsertId()`，必須在 `model` 裡手動實作 `RETURNING id` 方法。
-3.  **密碼安全**：`.env` 檔案內含敏感資訊，**禁止提交至 Git**。
-4.  **環境變數格式**：Terraform 變數在 Shell 中需以 `TF_VAR_` 開頭。
+1.  **Postgres ID 回傳**: Postgres 不支援 `LastInsertId()`。我們已在 `model` 層實作 `InsertWithId` 並使用 `RETURNING id` 語法，請以此為標準。
+2.  **Nullable 欄位處理**: 
+    *   資料庫設定為 `NULL` 的欄位，在 Go 中會映射為 `sql.NullString` 等。
+    *   **讀取**: 使用 `profile.Nickname.String`。
+    *   **判斷**: 使用 `profile.Nickname.Valid`。
+3.  **變數重複宣告**: 若遇到 `configFile redeclared` 錯誤，通常是 `goctl` 在 `rpc/` 目錄多生了一個 `pb.go`，直接刪除該檔即可。
+4.  **JWT Secret 安全**: 所有密鑰皆定義於 `etc/*.yaml`，生產環境將透過 K8s Secret 注入。
 
 ---
 ## 📝 目標：打造極致的雲端開發體驗
