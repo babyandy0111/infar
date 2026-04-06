@@ -121,17 +121,29 @@
 2.  **注入 Model**：修改 `rpc/internal/svc/servicecontext.go` 注入 `OrdersModel`。
 3.  **注入 RPC Client**：修改 `api/internal/svc/servicecontext.go` 注入 `orderclient.Order`。
 4.  **寫代碼**：在 `rpc/internal/logic/` 寫入 SQL 邏輯，在 `api/internal/logic/` 呼叫 RPC。
-
 #### Step 5: 納入自動化體系
 1.  **修改 `backend/dev.sh`**：加入啟動 `order-rpc` 與 `order-api` 的指令。
 2.  **修改 `infra/k8s/main.go`**：加入 cdk8s 部署定義，確保雲端與 Local K8s 都能跑起來。
+
+#### Step 6: 生成 API 文檔
+1.  **自動生成 Swagger** (在 `api/` 目錄執行)：
+    ```bash
+    goctl api swagger -api desc/order.api -dir doc
+    ```
+2.  **預覽文件**：將 `doc/*.json` 內容貼至 [Swagger Editor](https://editor.swagger.io/) 或使用 VS Code 插件查看。
 
 ---
 
 ## 🚀 4. 日常開發運維指令
 
 ### 4.1 極速啟動開發環境
-進入 `backend/` 目錄執行：
+...
+### 4.2 深度驗證與檢測
+...
+### 4.3 API 文檔管理
+*   **生成最新文檔**：進入各服務 `api/` 目錄執行 `goctl api swagger ...`。
+*   **全域文檔匯總**：建議未來可導入 Swagger UI 整合至網關中。
+
 ```bash
 ./dev.sh
 ```
