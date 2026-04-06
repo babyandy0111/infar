@@ -10,7 +10,7 @@ data:
     DataSource: host=postgres.infra.svc.cluster.local port=5432 user=infar_admin password=InfarDbPass123 dbname=infar_db sslmode=disable
     CacheRedis:
       - Host: redis-master.infra.svc.cluster.local:6379
-        Pass: 
+        Pass: InfarDbPass123
         Type: node
 
 ---
