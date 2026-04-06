@@ -1,6 +1,3 @@
-// Code scaffolded by goctl. Safe to edit.
-// goctl 1.10.1
-
 package logic
 
 import (
@@ -42,5 +39,10 @@ func (l *UserInfoLogic) UserInfo(req *types.UserInfoReq) (resp *types.UserInfoRe
 		Account:  res.Account,
 		Provider: res.Provider,
 		Roles:    res.Roles,
+		Nickname: res.Nickname,
+		Name:     res.Name,
+		Age:      res.Age,
+		Phone:    res.Phone,
+		Address:  res.Address,
 	}, nil
 }

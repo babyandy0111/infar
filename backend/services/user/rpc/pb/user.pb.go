@@ -290,6 +290,11 @@ type UserInfoResponse struct {
 	Account       string                 `protobuf:"bytes,2,opt,name=account,proto3" json:"account,omitempty"`
 	Provider      string                 `protobuf:"bytes,3,opt,name=provider,proto3" json:"provider,omitempty"`
 	Roles         []string               `protobuf:"bytes,4,rep,name=roles,proto3" json:"roles,omitempty"`
+	Nickname      string                 `protobuf:"bytes,5,opt,name=nickname,proto3" json:"nickname,omitempty"`
+	Name          string                 `protobuf:"bytes,6,opt,name=name,proto3" json:"name,omitempty"`
+	Age           int32                  `protobuf:"varint,7,opt,name=age,proto3" json:"age,omitempty"`
+	Phone         string                 `protobuf:"bytes,8,opt,name=phone,proto3" json:"phone,omitempty"`
+	Address       string                 `protobuf:"bytes,9,opt,name=address,proto3" json:"address,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -352,6 +357,41 @@ func (x *UserInfoResponse) GetRoles() []string {
 	return nil
 }
 
+func (x *UserInfoResponse) GetNickname() string {
+	if x != nil {
+		return x.Nickname
+	}
+	return ""
+}
+
+func (x *UserInfoResponse) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *UserInfoResponse) GetAge() int32 {
+	if x != nil {
+		return x.Age
+	}
+	return 0
+}
+
+func (x *UserInfoResponse) GetPhone() string {
+	if x != nil {
+		return x.Phone
+	}
+	return ""
+}
+
+func (x *UserInfoResponse) GetAddress() string {
+	if x != nil {
+		return x.Address
+	}
+	return ""
+}
+
 var File_pb_user_proto protoreflect.FileDescriptor
 
 const file_pb_user_proto_rawDesc = "" +
@@ -371,12 +411,17 @@ const file_pb_user_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x14\n" +
 	"\x05token\x18\x02 \x01(\tR\x05token\"!\n" +
 	"\x0fUserInfoRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\"n\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\"\xe0\x01\n" +
 	"\x10UserInfoResponse\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x18\n" +
 	"\aaccount\x18\x02 \x01(\tR\aaccount\x12\x1a\n" +
 	"\bprovider\x18\x03 \x01(\tR\bprovider\x12\x14\n" +
-	"\x05roles\x18\x04 \x03(\tR\x05roles2\xa2\x01\n" +
+	"\x05roles\x18\x04 \x03(\tR\x05roles\x12\x1a\n" +
+	"\bnickname\x18\x05 \x01(\tR\bnickname\x12\x12\n" +
+	"\x04name\x18\x06 \x01(\tR\x04name\x12\x10\n" +
+	"\x03age\x18\a \x01(\x05R\x03age\x12\x14\n" +
+	"\x05phone\x18\b \x01(\tR\x05phone\x12\x18\n" +
+	"\aaddress\x18\t \x01(\tR\aaddress2\xa2\x01\n" +
 	"\x04User\x125\n" +
 	"\bRegister\x12\x13.pb.RegisterRequest\x1a\x14.pb.RegisterResponse\x12,\n" +
 	"\x05Login\x12\x10.pb.LoginRequest\x1a\x11.pb.LoginResponse\x125\n" +

@@ -1,0 +1,144 @@
+basePath: /
+definitions:
+  types.LoginReq:
+    properties:
+      account:
+        type: string
+      password:
+        type: string
+      provider:
+        type: string
+    type: object
+  types.LoginRes:
+    properties:
+      id:
+        type: integer
+      token:
+        type: string
+    type: object
+  types.RegisterReq:
+    properties:
+      account:
+        type: string
+      password:
+        type: string
+      provider:
+        type: string
+    type: object
+  types.RegisterRes:
+    properties:
+      id:
+        type: integer
+    type: object
+  types.UserInfoRes:
+    properties:
+      account:
+        type: string
+      address:
+        type: string
+      age:
+        type: integer
+      id:
+        type: integer
+      name:
+        type: string
+      nickname:
+        type: string
+      phone:
+        type: string
+      provider:
+        type: string
+      roles:
+        items:
+          type: string
+        type: array
+    type: object
+host: 127.0.0.1:8888
+info:
+  contact: {}
+  description: 這是 Infar 微服務架構中的使用者中心網關。
+  title: Infar User Service API
+  version: "1.0"
+paths:
+  /user/info:
+    get:
+      description: 透過 JWT Token 自動辨識身分，回傳帳戶資訊與權限角色。
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 查詢成功回傳
+          schema:
+            $ref: '#/definitions/types.UserInfoRes'
+        "401":
+          description: 未授權
+          schema:
+            type: string
+        "500":
+          description: 伺服器錯誤
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: 使用者資料查詢
+      tags:
+      - User
+  /user/login:
+    post:
+      consumes:
+      - application/json
+      description: 驗證帳號、密碼與 Provider，成功後核發 JWT Token 用於後續 API 存取。
+      parameters:
+      - description: 登入資訊
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/types.LoginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 登入成功回傳
+          schema:
+            $ref: '#/definitions/types.LoginRes'
+        "500":
+          description: 伺服器或資料庫錯誤
+          schema:
+            type: string
+      summary: 使用者登入 (獲取 JWT)
+      tags:
+      - Auth
+  /user/register:
+    post:
+      consumes:
+      - application/json
+      description: 提供帳號、密碼與登入提供商 (Provider) 資訊，建立全新的使用者帳號。
+      parameters:
+      - description: 註冊資訊
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/types.RegisterReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 註冊成功回傳
+          schema:
+            $ref: '#/definitions/types.RegisterRes'
+        "500":
+          description: 伺服器或資料庫錯誤
+          schema:
+            type: string
+      summary: 使用者註冊
+      tags:
+      - Auth
+securityDefinitions:
+  ApiKeyAuth:
+    description: '直接填入 JWT Token (例如: eyJhbGci...)'
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

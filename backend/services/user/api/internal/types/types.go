@@ -33,4 +33,9 @@ type UserInfoRes struct {
 	Account  string   `json:"account"`
 	Provider string   `json:"provider"`
 	Roles    []string `json:"roles"`
+	Nickname string   `json:"nickname"`
+	Name     string   `json:"name"`
+	Age      int32    `json:"age"`
+	Phone    string   `json:"phone"`
+	Address  string   `json:"address"`
 }

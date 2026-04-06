@@ -36,6 +36,11 @@ message UserInfoResponse {
   string account = 2;
   string provider = 3;
   repeated string roles = 4;
+  string nickname = 5;
+  string name = 6;
+  int32 age = 7;
+  string phone = 8;
+  string address = 9;
 }
 
 service User {
