@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package pb;
+option go_package = "./pb";
+
+// 註冊
+message RegisterRequest {
+  string account = 1;
+  string password = 2;
+  string provider = 3;
+}
+
+message RegisterResponse {
+  int64 id = 1;
+}
+
+// 登入
+message LoginRequest {
+  string account = 1;
+  string password = 2;
+  string provider = 3;
+}
+
+message LoginResponse {
+  int64 id = 1;
+  string token = 2;
+}
+
+// 使用者資訊
+message UserInfoRequest {
+  int64 id = 1;
+}
+
+message UserInfoResponse {
+  int64 id = 1;
+  string account = 2;
+  string provider = 3;
+  repeated string roles = 4;
+}
+
+service User {
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc UserInfo(UserInfoRequest) returns (UserInfoResponse);
+}

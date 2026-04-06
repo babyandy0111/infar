@@ -1,0 +1,14 @@
+Name: user-api
+Host: 0.0.0.0
+Port: 8888
+
+# JWT 認證設定
+Auth:
+  AccessSecret: infar-secret-2026
+  AccessExpire: 86400 # 24 小時
+
+# 連接內部的 User RPC 服務
+UserRpc:
+  Endpoints:
+    - 127.0.0.1:9090
+  NonBlock: true

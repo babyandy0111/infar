@@ -1,0 +1,54 @@
+syntax = "v1"
+
+info (
+	title:   "User Service API"
+	desc:    "使用者中心網關"
+	author:  "Infar-Developer"
+	version: "v1"
+)
+
+type (
+	RegisterReq {
+		Account  string `json:"account"`
+		Password string `json:"password"`
+		Provider string `json:"provider,options=email|phone|google|github|line"`
+	}
+	RegisterRes {
+		Id int64 `json:"id"`
+	}
+	LoginReq {
+		Account  string `json:"account"`
+		Password string `json:"password"`
+		Provider string `json:"provider,default=email"`
+	}
+	LoginRes {
+		Id    int64  `json:"id"`
+		Token string `json:"token"`
+	}
+	UserInfoReq {
+		Id int64 `json:"id,optional"` // 可從 JWT 獲取，不強制要求傳入
+	}
+	UserInfoRes {
+		Id       int64    `json:"id"`
+		Account  string   `json:"account"`
+		Provider string   `json:"provider"`
+		Roles    []string `json:"roles"`
+	}
+)
+
+service user-api {
+	@handler Register
+	post /user/register (RegisterReq) returns (RegisterRes)
+
+	@handler Login
+	post /user/login (LoginReq) returns (LoginRes)
+}
+
+@server (
+	jwt: Auth
+)
+service user-api {
+	@handler UserInfo
+	get /user/info (UserInfoReq) returns (UserInfoRes)
+}
+
