@@ -9,14 +9,16 @@ import (
 )
 
 type ServiceContext struct {
-	Config     config.Config
-	UsersModel model.UsersModel
+	Config         config.Config
+	UsersModel     model.UsersModel
+	UserRolesModel model.UserRolesModel
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
 	conn := sqlx.NewSqlConn("postgres", c.DataSource)
 	return &ServiceContext{
-		Config:     c,
-		UsersModel: model.NewUsersModel(conn, c.CacheRedis),
+		Config:         c,
+		UsersModel:     model.NewUsersModel(conn, c.CacheRedis),
+		UserRolesModel: model.NewUserRolesModel(conn, c.CacheRedis),
 	}
 }

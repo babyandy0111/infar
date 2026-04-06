@@ -12,21 +12,23 @@ import (
 	"github.com/zeromicro/go-zero/core/conf"
 	"github.com/zeromicro/go-zero/rest"
 
-	// 🎉 必須引入產生的 docs 套件
-	httpSwagger "github.com/swaggo/http-swagger"
 	_ "infar/services/user/api/docs"
+
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 var configFile = flag.String("f", "etc/user-api.yaml", "the config file")
 
-// @title Infar User Service API
-// @version 1.0
-// @description 這是 Infar 微服務架構中的使用者中心網關。
-// @host 127.0.0.1:8888
-// @BasePath /
-// @securityDefinitions.apikey ApiKeyAuth
-// @in header
-// @name Authorization
+// @title			Infar User Service API
+// @version		1.0
+// @description	這是 Infar 微服務架構中的使用者中心網關。
+// @host			127.0.0.1:8888
+// @BasePath		/
+
+// @securityDefinitions.apikey	ApiKeyAuth
+// @in							header
+// @name						Authorization
+// @description				直接填入 JWT Token (例如: eyJhbGci...)
 func main() {
 	flag.Parse()
 
@@ -39,7 +41,6 @@ func main() {
 	ctx := svc.NewServiceContext(c)
 	handler.RegisterHandlers(server, ctx)
 
-	// 1. 處理 /swagger 根路徑跳轉到 index.html
 	server.AddRoute(rest.Route{
 		Method: http.MethodGet,
 		Path:   "/swagger",
@@ -48,10 +49,9 @@ func main() {
 		},
 	})
 
-	// 2. 處理 Swagger 靜態資源 (使用 WrapHandler)
 	server.AddRoute(rest.Route{
 		Method:  http.MethodGet,
-		Path:    "/swagger/:any", // go-zero 使用 :any 來匹配
+		Path:    "/swagger/:any",
 		Handler: httpSwagger.WrapHandler,
 	})
 

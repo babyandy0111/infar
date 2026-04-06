@@ -24,7 +24,20 @@ func NewUserInfoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UserInfo
 }
 
 func (l *UserInfoLogic) UserInfo(in *pb.UserInfoRequest) (*pb.UserInfoResponse, error) {
-	// todo: add your logic here and delete this line
+	userInfo, err := l.svcCtx.UsersModel.FindOne(l.ctx, in.Id)
+	if err != nil {
+		return nil, err
+	}
 
-	return &pb.UserInfoResponse{}, nil
+	roles, err := l.svcCtx.UserRolesModel.FindRolesByUserId(l.ctx, in.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.UserInfoResponse{
+		Id:       userInfo.Id,
+		Account:  userInfo.Account,
+		Provider: userInfo.Provider,
+		Roles:    roles,
+	}, nil
 }

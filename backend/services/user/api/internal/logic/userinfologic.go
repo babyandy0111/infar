@@ -5,6 +5,8 @@ package logic
 
 import (
 	"context"
+	"encoding/json"
+	"infar/services/user/rpc/userclient"
 
 	"infar/services/user/api/internal/svc"
 	"infar/services/user/api/internal/types"
@@ -27,7 +29,18 @@ func NewUserInfoLogic(ctx context.Context, svcCtx *svc.ServiceContext) *UserInfo
 }
 
 func (l *UserInfoLogic) UserInfo(req *types.UserInfoReq) (resp *types.UserInfoRes, err error) {
-	// todo: add your logic here and delete this line
+	userId, _ := l.ctx.Value("userId").(json.Number).Int64()
+	res, err := l.svcCtx.UserRpc.UserInfo(l.ctx, &userclient.UserInfoRequest{
+		Id: userId,
+	})
+	if err != nil {
+		return nil, err
+	}
 
-	return
+	return &types.UserInfoRes{
+		Id:       res.Id,
+		Account:  res.Account,
+		Provider: res.Provider,
+		Roles:    res.Roles,
+	}, nil
 }
