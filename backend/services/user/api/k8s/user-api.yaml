@@ -1,13 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-api-conf
+  namespace: app
+data:
+  user-api.yaml: |
+    Name: user-api
+    Host: 0.0.0.0
+    Port: 8888
+    UserRpc:
+      Endpoints:
+        - user-rpc-svc.app.svc.cluster.local:9090
+    Auth:
+      AccessSecret: infar-secret-2026
+      AccessExpire: 86400
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: user-api
   namespace: app
-  labels:
-    app: user-api
 spec:
-  replicas: 3
-  revisionHistoryLimit: 5
+  replicas: 1
   selector:
     matchLabels:
       app: user-api
@@ -21,33 +36,15 @@ spec:
         image: babyandy0111/infar-user-api:v1
         ports:
         - containerPort: 8888
-        readinessProbe:
-          tcpSocket:
-            port: 8888
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        livenessProbe:
-          tcpSocket:
-            port: 8888
-          initialDelaySeconds: 15
-          periodSeconds: 20
-        resources:
-          requests:
-            cpu: 500m
-            memory: 512Mi
-          limits:
-            cpu: 1000m
-            memory: 1024Mi
         volumeMounts:
-        - name: timezone
-          mountPath: /etc/localtime
+        - name: config
+          mountPath: /app/etc
       volumes:
-        - name: timezone
-          hostPath:
-            path: /usr/share/zoneinfo/Asia/Shanghai
+      - name: config
+        configMap:
+          name: user-api-conf
 
 ---
-
 apiVersion: v1
 kind: Service
 metadata:
@@ -59,51 +56,3 @@ spec:
     targetPort: 8888
   selector:
     app: user-api
-
----
-
-apiVersion: autoscaling/v2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: user-api-hpa-c
-  namespace: app
-  labels:
-    app: user-api-hpa-c
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: user-api
-  minReplicas: 3
-  maxReplicas: 10
-  metrics:
-  - type: Resource
-    resource:
-      name: cpu
-      target:
-        type: Utilization
-        averageUtilization: 80
-
----
-
-apiVersion: autoscaling/v2beta2
-kind: HorizontalPodAutoscaler
-metadata:
-  name: user-api-hpa-m
-  namespace: app
-  labels:
-    app: user-api-hpa-m
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: user-api
-  minReplicas: 3
-  maxReplicas: 10
-  metrics:
-  - type: Resource
-    resource:
-      name: memory
-      target:
-        type: Utilization
-        averageUtilization: 80
