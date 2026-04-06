@@ -28,6 +28,8 @@ spec:
     metadata:
       labels:
         app: user-rpc
+      annotations:
+        infar.io/config-last-updated: "2026-04-06-2315" # 👈 改這裡就會自動重啟
     spec:
       containers:
       - name: user-rpc
