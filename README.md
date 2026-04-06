@@ -111,6 +111,47 @@
 1. 在 `rpc/internal/svc/servicecontext.go` 初始化 Model。
 2. 在 `logic/` 目錄撰寫你的業務程式碼。
 
+### 3.4 打包與發佈 (GitOps SOP)
+本專案採組件化管理，每個服務皆具備獨立的 `docker/` 與 `k8s/` 資料夾。發佈時請統一在 `backend/` 目錄下執行指令。
+
+#### Step 1: 容器化與推送 (於 `backend/` 目錄執行)
+此步驟將程式打包成 Docker 鏡像並推送到 Docker Hub 倉庫。
+1.  **打包與推送 User RPC**:
+    ```bash
+    docker build -t babyandy0111/infar-user-rpc:v1 -f services/user/rpc/docker/Dockerfile .
+    docker push babyandy0111/infar-user-rpc:v1
+    ```
+2.  **打包與推送 User API**:
+    ```bash
+    docker build -t babyandy0111/infar-user-api:v1 -f services/user/api/docker/Dockerfile .
+    docker push babyandy0111/infar-user-api:v1
+    ```
+
+#### Step 2: 產生 K8s 部署清單 (於 `backend/` 目錄執行)
+使用 `goctl` 產出 K8s 部署 YAML，並存放在該服務的 `k8s/` 資料夾中。
+1.  **產生 RPC 部署檔**:
+    ```bash
+    goctl kube deploy \
+      -name user-rpc \
+      -namespace app \
+      -image babyandy0111/infar-user-rpc:v1 \
+      -port 9090 \
+      -o services/user/rpc/k8s/user-rpc.yaml
+    ```
+2.  **產生 API 部署檔**:
+    ```bash
+    goctl kube deploy \
+      -name user-api \
+      -namespace app \
+      -image babyandy0111/infar-user-api:v1 \
+      -port 8888 \
+      -o services/user/api/k8s/user-api.yaml
+    ```
+
+#### Step 3: GitOps 同步 (ArgoCD)
+1.  **提交變更**: `git add . && git commit -m "deploy: update user service" && git push`。
+2.  **ArgoCD 自動化**: ArgoCD 偵測到 Git 倉庫內的 `k8s/*.yaml` 變更後，會自動將新版鏡像應用到 K8s 叢集。
+
 ---
 
 ## 🚀 4. 日常開發運維指令 (DevX)
