@@ -1,3 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-api-conf
+  namespace: app
+data:
+  order-api.yaml: |
+    Name: order-api
+    Host: 0.0.0.0
+    Port: 8889
+    Auth: { AccessSecret: infar-secret-2026, AccessExpire: 86400 }
+    OrderRpc: { Endpoints: [ order-rpc-svc.app.svc.cluster.local:9091 ] }
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -6,7 +20,7 @@ metadata:
   labels:
     app: order-api
 spec:
-  replicas: 3
+  replicas: 1
   selector:
     matchLabels:
       app: order-api
@@ -15,7 +29,7 @@ spec:
       labels:
         app: order-api
       annotations:
-        infar.io/config-last-updated: "2026-04-06-init"
+        infar.io/config-last-updated: "2026-04-06-fix"
     spec:
       containers:
       - name: order-api
@@ -29,3 +43,16 @@ spec:
       - name: config
         configMap:
           name: order-api-conf
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-api-svc
+  namespace: app
+spec:
+  ports:
+  - port: 8889
+    targetPort: 8889
+  selector:
+    app: order-api
