@@ -116,7 +116,74 @@
 #### Step 3: 開始寫你的商業邏輯！
 1. 去修改 `api/desc/order.api` 和 `rpc/pb/order.proto`，加上你要的功能。
 2. 執行 `goctl` 更新代碼（詳見下方 3.3 節）。
-3. 到 `logic` 目錄下寫代碼。完成！
+3. **完成依賴注入 (DI)**：讓你的服務能連上資料庫與彼此（詳見下方 3.2.1 節）。
+4. 到 `logic` 目錄下寫代碼。完成！
+
+### 3.2.1 🪄 依賴注入 (Dependency Injection) 手把手指南
+這是開發中最關鍵的一步！你需要手動告訴程式：「你的資料庫在哪裡？」以及「你要去哪裡找其他服務？」。請依照以下 5 個小步驟完成（以 `order` 服務為例）。
+
+#### 1. 配置 RPC 的資料庫連線 (RPC Config)
+*   **檔案**：`services/order/rpc/internal/config/config.go`
+```go
+type Config struct {
+    zrpc.RpcServerConf
+    DataSource string          // 👈 加這行
+    CacheRedis cache.CacheConf // 👈 加這行
+}
+```
+
+#### 2. 將 Model 裝進 RPC (RPC ServiceContext)
+*   **檔案**：`services/order/rpc/internal/svc/servicecontext.go`
+```go
+type ServiceContext struct {
+    Config      config.Config
+    OrdersModel model.OrdersModel // 👈 1. 定義你的 Model
+}
+
+func NewServiceContext(c config.Config) *ServiceContext {
+    conn := sqlx.NewSqlConn("postgres", c.DataSource)
+    return &ServiceContext{
+        Config:      c,
+        OrdersModel: model.NewOrdersModel(conn, c.CacheRedis), // 👈 2. 注入
+    }
+}
+```
+
+#### 3. 配置 API 的連線目標 (API Config)
+*   **檔案**：`services/order/api/internal/config/config.go`
+```go
+type Config struct {
+    rest.RestConf
+    Auth struct {                  // 👈 1. JWT 驗證
+        AccessSecret string
+        AccessExpire int64
+    }
+    OrderRpc zrpc.RpcClientConf    // 👈 2. 為了連到 RPC 服務
+}
+```
+
+#### 4. 將 RPC Client 裝進 API (API ServiceContext)
+*   **檔案**：`services/order/api/internal/svc/servicecontext.go`
+```go
+type ServiceContext struct {
+    Config   config.Config
+    OrderRpc orderclient.Order // 👈 1. 定義 RPC Client
+}
+
+func NewServiceContext(c config.Config) *ServiceContext {
+	return &ServiceContext{
+		Config:   c,
+		OrderRpc: orderclient.NewOrder(zrpc.MustNewClient(c.OrderRpc)), // 👈 2. 注入
+	}
+}
+```
+
+#### 5. 點亮 Swagger 文件 (API Main)
+*   **檔案**：`services/order/api/order.go`
+*   **動作**：在 `import` 區塊補上一行 `_ "infar/services/order/api/docs"`。
+*   **目的**：如果不加這行，你的 Swagger 網頁會是空的。
+*   **ex**：swag init -q -g order.go --parseDependency --parseInternal
+> **💡 溫馨提醒**：剛加完這行時，IDE 可能會報錯說「找不到 docs」。這是正常的！因為 `docs` 資料夾必須等執行 `./dev.sh` 或手動跑 `swag init` 後才會自動產生，產生後紅線就會消失。
 
 ---
 
@@ -154,6 +221,21 @@ goctl api go -api services/你的服務/api/desc/你的服務.api -dir services/
 # 於 backend/ 目錄執行
 goctl model pg datasource -url "postgres://infar_admin:InfarDbPass123@127.0.0.1:5432/infar_db?sslmode=disable" -t "你的表名" -dir services/你的服務/model -c
 ```
+
+### 3.3.1 🛡️ 代碼更新與覆蓋規則 (安全守則)
+當你的資料庫加了欄位，或是 `.api` 增加了參數，你需要重新執行 `gen_service.sh`。請放心，腳本具備**自動保護機制**，不會洗掉你的心血。
+
+| 檔案類型 | 處理狀態 | 說明 (Junior 必讀) |
+| :--- | :--- | :--- |
+| **商業邏輯 (`logic/*.go`)** | ✅ **絕對安全** | 你寫的判斷邏輯、SQL 呼叫，**絕對不會被覆蓋**。 |
+| **依賴注入 (`svc/*.go`)** | ✅ **絕對安全** | 你手動裝上去的 Model 或 RPC Client，**絕對不會被覆蓋**。 |
+| **設定內容 (`config/*.go`)** | ✅ **絕對安全** | 你手動補齊的 `DataSource` 等欄位，**絕對不會被覆蓋**。 |
+| **入口檔案 (`*.go`)** | ✅ **絕對安全** | 你手動加的 Swagger 或 CORS 邏輯，**絕對不會被覆蓋**。 |
+| **運維配置 (`docker/`, `k8s/`)**| ✅ **絕對安全** | 你手動調整的資源限制或 Docker 步驟，**絕對不會被覆蓋**。 |
+| **定義契約 (`.api`, `.proto`)**| ✅ **絕對安全** | 腳本只會產生模版，如果檔案已存在，則**絕對不會觸碰**。 |
+| **自動產生的管路代碼** | 🔄 **自動更新** | `types.go` (參數定義)、`routes.go` (路由表)、`*_gen.go` (基礎 CRUD)。這些檔案會**自動同步**最新定義，請勿手動修改。 |
+
+> 💡 **心理建設**：在 Infar 專案中，除了 `_gen.go` 或 `types.go` 這種標註了 `DO NOT EDIT` 的檔案外，你寫的所有 Code 都是受保護的。**你可以放心地隨時重跑 `./gen_service.sh` 來同步最新的系統狀態！**
 
 ---
 

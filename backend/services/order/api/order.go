@@ -3,17 +3,17 @@ package main
 import (
 	"flag"
 	"fmt"
-	_ "infar/services/order/api/docs"
 	"net/http"
 
 	"infar/services/order/api/internal/config"
 	"infar/services/order/api/internal/handler"
 	"infar/services/order/api/internal/svc"
 
-	"github.com/zeromicro/go-zero/core/conf"
-	"github.com/zeromicro/go-zero/rest"
+	_ "infar/services/order/api/docs"
 
 	httpSwagger "github.com/swaggo/http-swagger"
+	"github.com/zeromicro/go-zero/core/conf"
+	"github.com/zeromicro/go-zero/rest"
 )
 
 var configFile = flag.String("f", "etc/order-api.yaml", "the config file")
