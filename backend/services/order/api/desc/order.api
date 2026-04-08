@@ -1,0 +1,21 @@
+syntax = "v1"
+
+info (
+	title:  "Infar Service API"
+	desc:   "Microservice API"
+	author: "andywang"
+	email:  "wang.shih.hua.tw@gmail.com"
+)
+
+type request {}
+
+type response {}
+
+service order-api {
+	@handler GetUser // TODO: set handler name and delete this comment
+	get /users/id/:userId (request) returns (response)
+
+	@handler CreateUser // TODO: set handler name and delete this comment
+	post /users/create (request)
+}
+

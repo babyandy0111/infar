@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-api
+  namespace: app
+  labels:
+    app: order-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: order-api
+  template:
+    metadata:
+      labels:
+        app: order-api
+      annotations:
+        infar.io/config-last-updated: "2026-04-06-init"
+    spec:
+      containers:
+      - name: order-api
+        image: babyandy0111/infar-order-api:v1
+        ports:
+        - containerPort: 8889
+        volumeMounts:
+        - name: config
+          mountPath: /app/etc
+      volumes:
+      - name: config
+        configMap:
+          name: order-api-conf

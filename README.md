@@ -2,6 +2,9 @@
 
 本專案提供一個從底層雲端基礎設施（Terraform + cdk8s）到上層微服務應用（go-zero + gRPC）的完整解決方案。我們致力於實現「本機開發與雲端生產環境的一致性」，並透過高度自動化提升開發體驗。
 
+> **👋 歡迎加入 Infar 後端團隊！**
+> 如果你是剛接觸 `go-zero` 或是微服務的新手，請不用擔心。本專案已經將繁瑣的 K8s 部署、編譯、目錄結構全部「腳本化」。你只需要專注於閱讀這份文件的 **第 3 節 (開發指南)**，跟著指令貼上，就能輕鬆寫出你的第一個微服務！
+
 ---
 
 ## 🏗 1. 全域架構與目錄結構 (Architecture & Structure)
@@ -15,7 +18,7 @@
 ### 1.2 專案目錄樹
 ```text
 /
-├── infra/                          # 【基礎設施層】
+├── infra/                          # 【基礎設施層】(DevOps/架構師專區)
 │   ├── k8s/                        # K8s 資源定義與部署中心
 │   │   ├── main.go                 # cdk8s 入口：定義 Deployment, Service, Ingress 邏輯
 │   │   ├── pkg/                    # 模組化組件 (CICD, Datastore, Observability, Platform)
@@ -25,18 +28,19 @@
 │   │   ├── .env                    # 環境變數 (需手動從 .env.example 複製並修改)
 │   │   └── tests/                  # 驗證腳本：檢查 Pods 健康度與資料庫連通性
 │   └── terraform/                  # 雲端 IaC 定義 (IaC)
-│       ├── aws/                    # EKS Fargate + RDS v2 + ElastiCache (Serverless)
+│       ├── aws/                    # EKS Fargate + RDS v2 + ElastiCache (Serverless 方案)
 │       └── gcp/                    # GKE Autopilot + Cloud SQL + Memorystore
-├── backend/                        # 【後端應用層】
+├── backend/                        # 【後端應用層】(🔥 後端開發者專區)
 │   ├── services/                   # 微服務叢集 (如 user, order 等)
 │   │   └── user/                   # 使用者服務
 │   │       ├── api/                # 對外 RESTful Gateway (含 Swagger docs)
 │   │       ├── rpc/                # 對內 gRPC 業務邏輯
 │   │       └── model/              # 資料庫對應層 (含客製化 Postgres 邏輯)
 │   ├── dev.sh                      # 🛠 開發者神器：一鍵啟動所有服務、自動清理 Port
+│   ├── gen_service.sh              # 🪄 服務生產線：一鍵產出微服務全套代碼
+│   ├── apihub.go                   # 🌐 統一文檔中心：整合所有微服務的 Swagger
 │   ├── init.sql                    # 🗄️ 全域資料庫初始化定義 (含 RBAC 預設資料)
-│   ├── go.mod                      # 後端統一依賴管理 (Module: infar)
-│   └── go.sum                      # 依賴版本鎖定
+│   └── go.mod                      # 後端統一依賴管理 (Module: infar)
 └── frontend/                       # 【前端應用層 - 開發中】
 ```
 
@@ -70,121 +74,146 @@
 
 ---
 
-## 🐹 3. Backend 微服務開發指南 (go-zero)
+## 🐹 3. Backend 微服務開發指南 (手把手教學篇)
 
-### 3.1 👨‍💻 開發者關注清單 (The Touch List)
-開發新功能時，你 **只需要** 關注以下檔案，其餘由工具生成：
+> 💡 **為什麼要分 API 和 RPC 兩層？**
+> *   **API 層 (對外)**：就像餐廳的「服務生」。負責接收 HTTP 請求、檢查 JWT Token、處理參數驗證，然後把單子交給內場。
+> *   **RPC 層 (對內)**：就像餐廳的「廚師」。專注於商業邏輯與資料庫 (Model) 存取，不直接接觸外部網路，最為安全。
 
-| 檔案類型 | 範例路徑 | 作用 |
+### 3.1 👨‍💻 核心關注清單 (你只需要改這些檔案)
+建立好服務後，你 **只需要** 在以下檔案寫 code，其他的配置檔腳本都會幫你處理好：
+
+| 檔案類型 | 檔案路徑範例 | 作用 (你要做什麼) |
 | :--- | :--- | :--- |
-| **1. API 契約** | `api/desc/*.api` | 定義路由、參數、JWT 規則 |
-| **2. RPC 契約** | `rpc/pb/*.proto` | 定義 gRPC 介面與資料編號 |
-| **3. 業務大腦** | `rpc/internal/logic/*.go` | **核心：** 實作 SQL 操作與商業規則 |
-| **4. 網關轉發** | `api/internal/logic/*.go` | 解析 JWT、呼叫 RPC 並組裝回傳值 |
-| **5. 依賴注入** | `*/internal/svc/servicecontext.go` | 實例化 Model 與 RPC 客戶端 |
-| **6. 客製 SQL** | `model/*model.go` | **重點：** 實作 Postgres 專用語法 (如 Returning ID) |
+| **1. 路由定義** | `api/desc/*.api` | 定義對外的網址 (URL)、傳入參數與回傳格式。 |
+| **2. 內部介面** | `rpc/pb/*.proto` | 定義 RPC 的函數名稱與資料結構。 |
+| **3. 業務大腦** | `rpc/internal/logic/*.go` | **核心：** 這裡寫主要的判斷邏輯、呼叫資料庫 (Model)。 |
+| **4. 網關轉發** | `api/internal/logic/*.go` | 這裡只做一件事：呼叫 RPC，並把結果轉成 JSON 回傳。 |
+| **5. 客製 SQL** | `model/*model.go` | (非必改) 如果自動產生的 CRUD 不夠用，來這裡寫複雜的 SQL 關聯查詢。 |
 
-### 3.2 新增服務標準 SOP (以 `order` 服務為例)
+### 3.2 🚀 【極速版】新增服務 SOP (使用 `gen_service.sh`)
+這是本專案推薦的開發方式，腳本會幫你搞定一切雜活！以建立 `order` (訂單) 服務為例：
 
-#### Step 1: 資料庫與 Model
-1. 修改 `backend/init.sql` 加表，匯入 DB：
+#### Step 1: 建立資料表
+1. 打開 `backend/init.sql`，加上你的 `orders` 資料表定義。
+2. 將表匯入本地資料庫：
    ```bash
    kubectl exec -i postgres-0 -c postgresql -n infra -- env PGPASSWORD=InfarDbPass123 psql -U infar_admin -d infar_db < backend/init.sql
    ```
-2. 生成 Model (在 `backend/` 目錄)：
-   ```bash
-   goctl model pg datasource -url "postgres://..." -t "orders" -dir services/order/model -c
-   ```
 
-#### Step 2: 定義並生成 RPC 服務 (於 `services/your_service/rpc` 目錄執行)
-1.  **快速產出模版**: 執行 `goctl rpc template -o pb/order.proto`。
-2.  **修改定義**: 編輯 `pb/order.proto`。
-3.  **生成 Go 代碼**: `goctl rpc protoc pb/order.proto --go_out=. --go-grpc_out=. --zrpc_out=.`。
-4.  **⚠️ 習慣性清理**: 執行 `rm pb.go etc/pb.yaml` 以免編譯報錯。
+#### Step 2: 執行一鍵生產腳本
+進入 `backend/` 目錄，執行我們專屬的生產腳本：
+```bash
+# 用法: ./gen_service.sh <服務名> <資料表名> <API埠號> <RPC埠號>
+./gen_service.sh order orders 8889 9091
+```
+> **腳本會自動幫你：**
+> 1. 自動拉取 DB 產生 Model 代碼。
+> 2. 自動產生 RPC 和 API 的骨架 (包含基礎的 `.api` 和 `.proto`)。
+> 3. **自動完成依賴注入 (DI)**：幫你把 Config 寫好，確保編譯能過。
+> 4. 自動產生 Dockerfile 與 K8s YAML 部署檔。
 
-#### Step 3: 定義並生成 API 網關 (於 `services/your_service/api` 目錄執行)
-1.  **快速產出模版**: 執行 `goctl api template -o desc/order.api`。
-2.  **修改定義**: 編輯 `desc/order.api`。
-3.  **生成 Go 代碼**: `goctl api go -api desc/order.api -dir .`。
+#### Step 3: 開始寫你的商業邏輯！
+1. 去修改 `api/desc/order.api` 和 `rpc/pb/order.proto`，加上你要的功能。
+2. 執行 `goctl` 更新代碼（詳見下方 3.3 節）。
+3. 到 `logic` 目錄下寫代碼。完成！
 
-#### Step 4: 實作邏輯
-1. 在 `rpc/internal/svc/servicecontext.go` 初始化 Model。
-2. 在 `logic/` 目錄撰寫你的業務程式碼。
+---
 
-### 3.4 打包與發佈 (GitOps SOP)
-本專案採組件化管理，每個服務皆具備獨立的 `docker/` 與 `k8s/` 資料夾。發佈時請統一在 `backend/` 目錄下執行指令。
+### 3.3 🛠️ 【手動/進階版】更新與生成代碼 (底層原理)
+如果你修改了 `.api` 或是 `.proto`，你需要「手動」告訴 `goctl` 幫你更新 Go 程式碼。
+*(這也是腳本 `gen_service.sh` 內部在做的事情)*
 
-#### Step 1: 容器化與推送 (於 `backend/` 目錄執行)
-此步驟將程式打包成 Docker 鏡像並推送到 Docker Hub 倉庫。
-1.  **打包與推送 User RPC**:
+**1. 更新 RPC 服務 (改了 `.proto` 之後)：**
+於 `services/你的服務/rpc` 目錄執行：
+```bash
+goctl rpc protoc pb/你的服務.proto --go_out=. --go-grpc_out=. --zrpc_out=.
+```
+**⚠️ 習慣性清理**：執行完後，請**務必**手動執行 `rm pb.go etc/pb.yaml`！`goctl` 會產生多餘的進入點檔案，不刪掉會導致編譯報錯 (`redeclared in this package`)。
+
+**2. 更新 API 網關 (改了 `.api` 之後)：**
+於 `services/你的服務/api` 目錄執行：
+```bash
+goctl api go -api desc/你的服務.api -dir .
+```
+
+**3. 更新 Model (改了 DB 之後)：**
+於 `backend/` 目錄執行：
+```bash
+goctl model pg datasource -url "postgres://infar_admin:InfarDbPass123@127.0.0.1:5432/infar_db?sslmode=disable" -t "你的表名" -dir services/你的服務/model -c
+```
+
+---
+
+### 3.4 📦 打包與發佈 (GitOps SOP)
+本專案採組件化管理，每個服務皆具備獨立的 `docker/` 與 `k8s/` 資料夾。發佈時請統一在 `backend/` 目錄下執行。
+
+#### Step 1: 容器化與推送 (生產貨物)
+1.  **打包與推送 RPC**:
     ```bash
-    docker build -t babyandy0111/infar-user-rpc:v1 -f services/user/rpc/docker/Dockerfile .
-    docker push babyandy0111/infar-user-rpc:v1
+    docker build -t 你的Docker帳號/infar-user-rpc:v1 -f services/user/rpc/docker/Dockerfile .
+    docker push 你的Docker帳號/infar-user-rpc:v1
     ```
-2.  **打包與推送 User API**:
+2.  **打包與推送 API**:
     ```bash
-    docker build -t babyandy0111/infar-user-api:v1 -f services/user/api/docker/Dockerfile .
-    docker push babyandy0111/infar-user-api:v1
+    docker build -t 你的Docker帳號/infar-user-api:v1 -f services/user/api/docker/Dockerfile .
+    docker push 你的Docker帳號/infar-user-api:v1
     ```
 
-#### Step 2: 產生 K8s 部署清單 (於 `backend/` 目錄執行)
-使用 `goctl` 產出 K8s 部署 YAML，並存放在該服務的 `k8s/` 資料夾中。
-1.  **產生 RPC 部署檔**:
-    ```bash
-    goctl kube deploy \
-      -name user-rpc \
-      -namespace app \
-      -image babyandy0111/infar-user-rpc:v1 \
-      -port 9090 \
-      -o services/user/rpc/k8s/user-rpc.yaml
-    ```
-2.  **產生 API 部署檔**:
-    ```bash
-    goctl kube deploy \
-      -name user-api \
-      -namespace app \
-      -image babyandy0111/infar-user-api:v1 \
-      -port 8888 \
-      -o services/user/api/k8s/user-api.yaml
-    ```
+#### Step 2: 產生 K8s 部署清單 (更新清單)
+使用 `goctl` 產出 K8s 部署 YAML，並存放在該服務的 `k8s/` 資料夾中。*(如果用 gen_service.sh，這步已自動完成)*
+```bash
+# 產生範例
+goctl kube deploy -name user-rpc -namespace app -image 你的Docker帳號/infar-user-rpc:v1 -port 9090 -o services/user/rpc/k8s/user-rpc.yaml
+```
 
-#### Step 3: GitOps 同步 (ArgoCD)
-1.  **提交變更**: `git add . && git commit -m "deploy: update user service" && git push`。
+#### Step 3: GitOps 同步 (ArgoCD 送貨)
+1.  **提交變更**: `git add . && git commit -m "deploy: update service" && git push`。
 2.  **ArgoCD 自動化**: ArgoCD 偵測到 Git 倉庫內的 `k8s/*.yaml` 變更後，會自動將新版鏡像應用到 K8s 叢集。
 
 ---
 
 ## 🚀 4. 日常開發運維指令 (DevX)
 
-### 4.1 智慧啟動神器 (`dev.sh`)
+### 4.1 🛠️ 智慧啟動神器 (`dev.sh`)
 進入 `backend/` 目錄執行：
 ```bash
 ./dev.sh
 ```
-*   **自動化流程**: 
-    1. **暴力清場**: 自動殺掉佔用 8888, 9090 的舊程序，解決 `Address already in use`。
-    2. **通道修復**: 自動檢查並恢復 K8s 內的 Postgres/Redis 連線。
-    3. **文檔同步**: 自動掃描 Go 註解並產生 Swagger JSON。
-    4. **並行啟動**: 同時跑起所有的 RPC 與 API 服務。
-    5. **秒殺終止**: 按下 **一次 Ctrl+C**，透過 **PGID (Process Group)** 機制瞬間清空所有子程序，絕不殘留。
+*   **暴力清場**: 自動殺掉佔用 8888, 9090 的舊程序，解決 `Address already in use` 錯誤。
+*   **通道修復**: 自動檢查並恢復 K8s 內的 Postgres/Redis Port-forward 連線。
+*   **並行啟動**: 同時跑起所有的 RPC 與 API 服務。
+*   **秒殺終止**: 按下 **一次 Ctrl+C**，透過 **PGID (Process Group)** 機制瞬間清空所有子程序，絕不殘留！
 
-### 4.2 API 文檔中心 (Swagger UI)
-啟動 `./dev.sh` 後，直接存取：
-👉 **http://127.0.0.1:8888/swagger**
-*   **Authorize**: 直接貼入 JWT Token 即可進行線上調試。
-*   **Tags**: 支援自定義分組（在 Handler 使用 `@Tags` 註解）。
+### 4.2 🌐 統一 API 文檔中心 (Swagger Hub)
+執行 `./dev.sh` 後，系統會自動收集所有微服務的 API 文件，請用瀏覽器開啟：
+👉 **http://127.0.0.1:8000**
+*   **下拉選單切換**：在網頁上方可自由切換 `User Service`, `Order Service` 等。
+*   **JWT 測試**：點擊右上方 **Authorize** 按鈕，直接貼入 Token 即可進行實機連線測試。
+*   (註：各服務獨立的 Swagger 依然可以透過對應的 Port 存取，如 `8888/swagger`)
 
 ---
 
-## 💡 5. 開發陷阱與注意事項 (Tips)
+## 💡 5. 開發陷阱與注意事項 (避坑指南)
 
-1.  **Postgres ID 回傳**: Postgres 不支援 `LastInsertId()`。我們已在 `model` 層實作 `InsertWithId` 並使用 `RETURNING id` 語法，請以此為標準。
-2.  **Nullable 欄位處理**: 
-    *   資料庫設定為 `NULL` 的欄位，在 Go 中會映射為 `sql.NullString` 等。
-    *   **讀取**: 使用 `profile.Nickname.String`。
-    *   **判斷**: 使用 `profile.Nickname.Valid`。
-3.  **變數重複宣告**: 若遇到 `configFile redeclared` 錯誤，通常是 `goctl` 在 `rpc/` 目錄多生了一個 `pb.go`，直接刪除該檔即可。
-4.  **JWT Secret 安全**: 所有密鑰皆定義於 `etc/*.yaml`，生產環境將透過 K8s Secret 注入。
+請新手務必閱讀此區塊，這裡記錄了團隊踩過的血淚史：
+
+1.  **Postgres ID 回傳問題**: 
+    Postgres 的原生驅動不支援 `LastInsertId()`。如果你需要拿到新增後的 ID，請不要用預設的 `Insert`，務必在 `model` 裡實作 `RETURNING id` 語法（參考 `usersmodel.go`）。
+2.  **Nullable 欄位 (可為空值) 的坑**: 
+    資料庫設定為 `NULL` 的欄位，在 Go 中會變成 `sql.NullString` 或 `sql.NullInt64`。
+    *   **不要直接取值**！請使用 `.String` 或 `.Int64` 來讀取。
+    *   **判斷是否為空**：使用 `.Valid` 屬性判斷。
+3.  **變數重複宣告 (`redeclared in this package`)**: 
+    如果在 `rpc` 目錄下發生這個編譯錯誤，絕對是因為 `goctl` 又幫你生了一個多餘的 `pb.go`，請直接把它刪掉。
+4.  **改了 `.api` 後編譯報錯 (`assignment mismatch`)**: 
+    如果你在 `.api` 檔案裡將某個路由加上了 `returns (Response)`，請記得去對應的 `logic/*.go` 檔案中，把函數的**回傳值簽名補上** (加上 `resp *types.Response`)，否則 Go 編譯器會因為回傳數量不對而報錯。
+5.  **依賴注入找不到變數 (`Unresolved reference`)**:
+    如果 `ServiceContext` 報錯說找不到 `OrderRpc` 或 `DataSource`，請先檢查你的 `internal/config/config.go`，確認你是否有把該變數定義在 Struct 裡面。
+6.  **K8s 內部 Redis 密碼 (`NOAUTH` 錯誤)**: 
+    本專案 K8s 環境內的 Redis 預設密碼為 **`InfarDbPass123`**。在填寫 `.yaml` 設定檔（或 K8s ConfigMap）時，必須正確填寫 `Pass` 欄位，否則 RPC 會報錯。
+7.  **ArgoCD 改了 ConfigMap 卻沒生效？**: 
+    K8s 預設只監控 Deployment 本身的變動。若只改 ConfigMap，Pod 不會重啟。**請務必隨手修改 Deployment 裡的 `annotations: infar.io/config-last-updated` 戳記**，以觸發自動滾動更新。
 
 ---
 ## 📝 目標：打造極致的雲端開發體驗

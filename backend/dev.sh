@@ -77,8 +77,13 @@ for service_path in "$SERVICES_DIR"/*; do
     fi
 done
 
+# 3. 啟動統一 API 文檔中心 (Swagger Hub)
+echo "🌐 正在啟動統一 API 文檔中心..."
+go run apihub.go &
+
 echo "-----------------------------------------"
-echo "🎉 成功動態啟動了 $count 個服務模組！"
+echo "🎉 成功動態啟動了 $count 個服務模組與 API Hub！"
+echo "👉 API Hub 入口: http://127.0.0.1:8000"
 echo "💡 提示：隨時按下 [Ctrl + C] 即可安全停止所有服務"
 echo "========================================="
 

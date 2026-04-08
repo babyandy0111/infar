@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-rpc
+  namespace: app
+  labels:
+    app: order-rpc
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: order-rpc
+  template:
+    metadata:
+      labels:
+        app: order-rpc
+      annotations:
+        infar.io/config-last-updated: "2026-04-06-init"
+    spec:
+      containers:
+      - name: order-rpc
+        image: babyandy0111/infar-order-rpc:v1
+        ports:
+        - containerPort: 9091
+        volumeMounts:
+        - name: config
+          mountPath: /app/etc
+      volumes:
+      - name: config
+        configMap:
+          name: order-rpc-conf
