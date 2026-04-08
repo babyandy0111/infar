@@ -53,6 +53,10 @@ sed -i '' "/import (/a\\
 	_ \"infar/services/$SERVICE_NAME/api/docs\"
 " "$BASE_DIR/api/$SERVICE_NAME.go"
 
+# 📚 自動補齊 Swagger Docs，確保編譯不報錯
+echo "📚 [3.5/6] 產生初始 Swagger Docs..."
+(cd "$BASE_DIR/api" && swag init -q -g $SERVICE_NAME.go)
+
 # 4. 自動化注入 (補齊 Config 結構與 SVC)
 echo "⚙️  [4/6] 注入 Config 與依賴..."
 
@@ -117,10 +121,12 @@ EOF
 # 5. 運維與配置 (Dockerfile & K8s)
 echo "🐳 [5/6] 產生運維配置..."
 rm -f Dockerfile
-RPC_MAIN_FILE=$(find "$BASE_DIR/rpc" -maxdepth 1 -name "*.go" | head -n 1)
+# 取出相對路徑，讓 Docker 裡面的 go build 能找到檔案
+RPC_MAIN_FILE=$(find "services/$SERVICE_NAME/rpc" -maxdepth 1 -name "*.go" | head -n 1)
 goctl docker -go "$RPC_MAIN_FILE" -exe "$SERVICE_NAME-rpc" --port $RPC_PORT --home "$GOCTL_HOME" && mv Dockerfile "$BASE_DIR/rpc/docker/Dockerfile"
+
 rm -f Dockerfile
-API_MAIN_FILE=$(find "$BASE_DIR/api" -maxdepth 1 -name "*.go" | head -n 1)
+API_MAIN_FILE=$(find "services/$SERVICE_NAME/api" -maxdepth 1 -name "*.go" | head -n 1)
 goctl docker -go "$API_MAIN_FILE" -exe "$SERVICE_NAME-api" --port $API_PORT --home "$GOCTL_HOME" && mv Dockerfile "$BASE_DIR/api/docker/Dockerfile"
 goctl kube deploy -name "$SERVICE_NAME-rpc" -namespace app -image "$DOCKER_USER/infar-$SERVICE_NAME-rpc:v1" -port "$RPC_PORT" --home "$GOCTL_HOME" -o "$BASE_DIR/rpc/k8s/$SERVICE_NAME-rpc.yaml"
 goctl kube deploy -name "$SERVICE_NAME-api" -namespace app -image "$DOCKER_USER/infar-$SERVICE_NAME-api:v1" -port "$API_PORT" --home "$GOCTL_HOME" -o "$BASE_DIR/api/k8s/$SERVICE_NAME-api.yaml"

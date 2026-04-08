@@ -8,7 +8,7 @@ ADD go.mod .
 ADD go.sum .
 RUN go mod download
 COPY . .
-RUN go build -ldflags="-s -w" -o /app/order-api Users/andywang/GolandProjects/infar/backend/services/order/api/order.go
+RUN go build -ldflags="-s -w" -o /app/order-api services/order/api/order.go
 
 FROM alpine:latest
 RUN apk update --no-cache && apk add --no-cache ca-certificates tzdata
