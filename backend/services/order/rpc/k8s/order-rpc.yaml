@@ -4,11 +4,14 @@ metadata:
   name: order-rpc-conf
   namespace: app
 data:
-  order.yaml: |
-    Name: order.rpc
+  order-rpc.yaml: |
+    Name: order-rpc
     ListenOn: 0.0.0.0:9091
     DataSource: host=postgres.infra.svc.cluster.local port=5432 user=infar_admin password=InfarDbPass123 dbname=infar_db sslmode=disable
-    CacheRedis: [ { Host: redis-master.infra.svc.cluster.local:6379, Pass: InfarDbPass123, Type: node } ]
+    CacheRedis:
+      - Host: redis-master.infra.svc.cluster.local:6379
+        Pass: InfarDbPass123
+        Type: node
 
 ---
 apiVersion: apps/v1
@@ -19,7 +22,7 @@ metadata:
   labels:
     app: order-rpc
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: order-rpc
@@ -28,7 +31,7 @@ spec:
       labels:
         app: order-rpc
       annotations:
-        infar.io/config-last-updated: "2026-04-06-fix"
+        infar.io/config-last-updated: "20260406"
     spec:
       containers:
       - name: order-rpc

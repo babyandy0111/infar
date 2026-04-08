@@ -8,8 +8,16 @@ data:
     Name: order-api
     Host: 0.0.0.0
     Port: 8889
-    Auth: { AccessSecret: infar-secret-2026, AccessExpire: 86400 }
-    OrderRpc: { Endpoints: [ order-rpc-svc.app.svc.cluster.local:9091 ] }
+    Auth:
+      AccessSecret: infar-secret-2026
+      AccessExpire: 86400
+    # 這裡的名稱會在腳本中處理，或是維持通用
+    OrderRpc:
+      Endpoints:
+        - order-rpc-svc.app.svc.cluster.local:9091
+    UserRpc:
+      Endpoints:
+        - user-rpc-svc.app.svc.cluster.local:9090
 
 ---
 apiVersion: apps/v1
@@ -20,7 +28,7 @@ metadata:
   labels:
     app: order-api
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: order-api
@@ -29,7 +37,7 @@ spec:
       labels:
         app: order-api
       annotations:
-        infar.io/config-last-updated: "2026-04-06-fix"
+        infar.io/config-last-updated: "20260406"
     spec:
       containers:
       - name: order-api

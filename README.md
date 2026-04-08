@@ -121,25 +121,37 @@
 ---
 
 ### 3.3 🛠️ 【手動/進階版】更新與生成代碼 (底層原理)
-如果你修改了 `.api` 或是 `.proto`，你需要「手動」告訴 `goctl` 幫你更新 Go 程式碼。
-*(這也是腳本 `gen_service.sh` 內部在做的事情)*
+如果你不使用一鍵腳本，或是你只修改了單一檔案（例如 `.api` 或 `.proto`），你需要「手動」告訴 `goctl` 幫你更新 Go 程式碼。
+
+> 🚨 **【極度重要】模板驅動原則**：
+> 本專案所有的生成指令，**必須**帶上 `--home .goctl` 參數。這會讓 `goctl` 讀取我們寫在 `backend/.goctl` 下的專屬模板（包含 CORS 設定、Swagger 路由、K8s ConfigMap 掛載等）。**請統一在 `backend/` 根目錄下執行以下指令。**
 
 **1. 更新 RPC 服務 (改了 `.proto` 之後)：**
-於 `services/你的服務/rpc` 目錄執行：
 ```bash
-goctl rpc protoc pb/你的服務.proto --go_out=. --go-grpc_out=. --zrpc_out=.
+# 於 backend/ 目錄執行 (注意路徑都是從 backend 出發)
+goctl rpc protoc services/你的服務/rpc/pb/你的服務.proto \
+  --proto_path=services/你的服務/rpc/pb \
+  --go_out=services/你的服務/rpc \
+  --go-grpc_out=services/你的服務/rpc \
+  --zrpc_out=services/你的服務/rpc \
+  --home $(pwd)/.goctl
 ```
-**⚠️ 習慣性清理**：執行完後，請**務必**手動執行 `rm pb.go etc/pb.yaml`！`goctl` 會產生多餘的進入點檔案，不刪掉會導致編譯報錯 (`redeclared in this package`)。
+*   **⚠️ 習慣性清理**：執行完後，請**務必**手動執行 `rm pb.go etc/pb.yaml` (在 rpc 目錄下)。`goctl` 常常會多生出這些廢檔，導致 `redeclared in this package` 編譯錯誤。
 
 **2. 更新 API 網關 (改了 `.api` 之後)：**
-於 `services/你的服務/api` 目錄執行：
 ```bash
-goctl api go -api desc/你的服務.api -dir .
+# 於 backend/ 目錄執行
+goctl api go -api services/你的服務/api/desc/你的服務.api -dir services/你的服務/api --home $(pwd)/.goctl
 ```
+*   **📚 Swagger 補齊 (必做)**：每次產生完 API 代碼後，**必須**去執行 `swag init`，否則在編譯或打包 Docker 時，會因為找不到 `docs/` 資料夾而噴出 `missing import path` 錯誤。
+    ```bash
+    cd services/你的服務/api
+    swag init -q -g 你的服務.go
+    ```
 
 **3. 更新 Model (改了 DB 之後)：**
-於 `backend/` 目錄執行：
 ```bash
+# 於 backend/ 目錄執行
 goctl model pg datasource -url "postgres://infar_admin:InfarDbPass123@127.0.0.1:5432/infar_db?sslmode=disable" -t "你的表名" -dir services/你的服務/model -c
 ```
 

@@ -14,8 +14,5 @@ type ServiceContext struct {
 
 func NewServiceContext(c config.Config) *ServiceContext {
 	conn := sqlx.NewSqlConn("postgres", c.DataSource)
-	return &ServiceContext{
-		Config:      c,
-		OrdersModel: model.NewOrdersModel(conn, c.CacheRedis),
-	}
+	return &ServiceContext{Config: c, OrdersModel: model.NewOrdersModel(conn, c.CacheRedis)}
 }

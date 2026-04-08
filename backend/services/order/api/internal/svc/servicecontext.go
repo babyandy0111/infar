@@ -12,8 +12,5 @@ type ServiceContext struct {
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
-	return &ServiceContext{
-		Config:   c,
-		OrderRpc: orderclient.NewOrder(zrpc.MustNewClient(c.OrderRpc)),
-	}
+	return &ServiceContext{Config: c, OrderRpc: orderclient.NewOrder(zrpc.MustNewClient(c.OrderRpc))}
 }
