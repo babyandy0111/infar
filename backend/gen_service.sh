@@ -2,9 +2,16 @@
 set -e
 
 # ==============================================================
-# Infar 微服務智能生產線 v8.0 (全面統一命名標準版)
+# Infar 微服務智能生產線 v8.1 (防呆保護版)
 # ==============================================================
 # 新標準：API 統一叫 *-api.yaml，RPC 統一叫 *-rpc.yaml
+
+# 解析參數
+FORCE_OVERWRITE=false
+if [ "$1" == "--force" ]; then
+    FORCE_OVERWRITE=true
+    shift
+fi
 
 SERVICE_NAME=$1
 TABLE_NAME=$2
@@ -13,15 +20,30 @@ DOCKER_USER="babyandy0111"
 DB_URL="postgres://infar_admin:InfarDbPass123@127.0.0.1:5432/infar_db?sslmode=disable"
 
 if [ -z "$SERVICE_NAME" ] || [ -z "$TABLE_NAME" ] || [ -z "$PORT_ID" ]; then
-    echo "❌ 錯誤: 使用方式 -> ./gen_service.sh [服務名] [資料表名] [Port後三碼]"
-    echo "範例: ./gen_service.sh order orders 889"
+    echo "❌ 錯誤: 使用方式 -> ./gen_service.sh [--force] [服務名] [資料表名] [Port後三碼]"
+    echo "範例 (首次建立): ./gen_service.sh order orders 889"
+    echo "範例 (強制覆蓋): ./gen_service.sh --force order orders 889"
+    exit 1
+fi
+
+ROOT_DIR=$(pwd)
+BASE_DIR="$ROOT_DIR/services/$SERVICE_NAME"
+
+# 防呆機制：檢查服務是否已存在
+if [ -d "$BASE_DIR" ] && [ "$FORCE_OVERWRITE" = false ]; then
+    echo "🛑 防呆保護觸發！"
+    echo "服務 '$SERVICE_NAME' 已經存在於 $BASE_DIR。"
+    echo "為了保護您已經撰寫的商業邏輯與設定檔，腳本拒絕直接覆蓋。"
+    echo ""
+    echo "👉 您的選擇："
+    echo "  1. 若您只是修改了資料表或 API 欄位，請參考 README.md 的「3.3 手動更新代碼」流程，手動執行 goctl 指令進行局部更新。"
+    echo "  2. 若您確信要『徹底毀滅並重建』這個服務（這會重置 .api, .proto, .yaml 等檔案），請加上 --force 參數："
+    echo "     ./gen_service.sh --force $SERVICE_NAME $TABLE_NAME $PORT_ID"
     exit 1
 fi
 
 API_PORT="8$PORT_ID"
 RPC_PORT="9$PORT_ID"
-ROOT_DIR=$(pwd)
-BASE_DIR="$ROOT_DIR/services/$SERVICE_NAME"
 GOCTL_HOME="$ROOT_DIR/.goctl"
 CAP_SERVICE_NAME=$(echo "$SERVICE_NAME" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
 CAP_TABLE_NAME=$(echo "$TABLE_NAME" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
