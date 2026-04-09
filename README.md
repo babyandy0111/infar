@@ -281,7 +281,7 @@ goctl kube deploy -name user-rpc -namespace app -image 你的Docker帳號/infar-
 ```bash
 ./dev.sh
 ```
-*   **暴力清場**: 自動殺掉佔用 8888, 9090 的舊程序，解決 `Address already in use` 錯誤。
+*   **動態清場**: 自動掃描所有服務的 `*.yaml` 配置，精準找出所有被定義的 Port 並強制清理佔用程序，徹底解決 `Address already in use` 錯誤，再也不用手動殺 Port！
 *   **通道修復**: 自動檢查並恢復 K8s 內的 Postgres/Redis Port-forward 連線。
 *   **並行啟動**: 同時跑起所有的 RPC 與 API 服務。
 *   **秒殺終止**: 按下 **一次 Ctrl+C**，透過 **PGID (Process Group)** 機制瞬間清空所有子程序，絕不殘留！
@@ -289,7 +289,7 @@ goctl kube deploy -name user-rpc -namespace app -image 你的Docker帳號/infar-
 ### 4.2 🌐 統一 API 文檔中心 (Swagger Hub)
 執行 `./dev.sh` 後，系統會自動收集所有微服務的 API 文件，請用瀏覽器開啟：
 👉 **http://127.0.0.1:8000**
-*   **下拉選單切換**：在網頁上方可自由切換 `User Service`, `Order Service` 等。
+*   **動態下拉選單切換**：`apihub.go` 會即時掃描 `services/` 目錄，自動把新建立的服務（如 User, Order, Role 等）加入上方選單，**完全無需手動設定**。
 *   **JWT 測試**：點擊右上方 **Authorize** 按鈕，直接貼入 Token 即可進行實機連線測試。
 *   (註：各服務獨立的 Swagger 依然可以透過對應的 Port 存取，如 `8888/swagger`)
 
