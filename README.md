@@ -165,15 +165,22 @@ type Config struct {
 #### 4. 將 RPC Client 裝進 API (API ServiceContext)
 *   **檔案**：`services/order/api/internal/svc/servicecontext.go`
 ```go
+package svc
+import (
+    "infar/services/order/api/internal/config"
+    "infar/services/order/rpc/order" // 👈 1. 引入 RPC 客戶端套件 (預設為服務名稱)
+    "github.com/zeromicro/go-zero/zrpc"
+)
+
 type ServiceContext struct {
     Config   config.Config
-    OrderRpc orderclient.Order // 👈 1. 定義 RPC Client
+    OrderRpc order.Order // 👈 2. 定義 RPC Client
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
 	return &ServiceContext{
 		Config:   c,
-		OrderRpc: orderclient.NewOrder(zrpc.MustNewClient(c.OrderRpc)), // 👈 2. 注入
+		OrderRpc: order.NewOrder(zrpc.MustNewClient(c.OrderRpc)), // 👈 3. 注入
 	}
 }
 ```
