@@ -2,10 +2,14 @@ package config
 
 import (
 	"github.com/zeromicro/go-zero/rest"
-	// INFAR_API_CONFIG_IMPORTS
+	"github.com/zeromicro/go-zero/zrpc"
 )
 
 type Config struct {
 	rest.RestConf
-	// INFAR_API_CONFIG_FIELDS
+	Auth struct {
+		AccessSecret string
+		AccessExpire int64
+	}
+	INFAR_CAP_SERVICE_NAME_RPCCONF zrpc.RpcClientConf
 }

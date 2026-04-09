@@ -2,18 +2,20 @@ package svc
 
 import (
 	{{.imports}}
-	// INFAR_RPC_SVC_IMPORTS
+	"infar/services/INFAR_SERVICE_NAME/model"
+	"github.com/zeromicro/go-zero/core/stores/sqlx"
+	_ "github.com/lib/pq"
 )
 
 type ServiceContext struct {
 	Config config.Config
-	// INFAR_RPC_SVC_FIELDS
+	INFAR_MODEL_INTERFACE model.INFAR_MODEL_INTERFACE
 }
 
 func NewServiceContext(c config.Config) *ServiceContext {
-	// INFAR_RPC_SVC_PRE_INJECT
+	conn := sqlx.NewSqlConn("postgres", c.DataSource)
 	return &ServiceContext{
 		Config: c,
-		// INFAR_RPC_SVC_INJECT
+		INFAR_MODEL_INTERFACE: model.NewINFAR_MODEL_INTERFACE(conn, c.CacheRedis),
 	}
 }
