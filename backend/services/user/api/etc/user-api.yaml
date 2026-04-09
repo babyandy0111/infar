@@ -12,3 +12,7 @@ UserRpc:
   Endpoints:
     - 127.0.0.1:9090
   NonBlock: true
+
+Log:
+  Stat: false
+

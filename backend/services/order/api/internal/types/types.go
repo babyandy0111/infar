@@ -3,8 +3,36 @@
 
 package types
 
-type Request struct {
+type CreateReq struct {
+	Data string `json:"data"` // TODO: 替換為實際新增欄位
+}
+
+type DeleteReq struct {
+	Id int64 `path:"id"`
+}
+
+type GetReq struct {
+	Id int64 `path:"id"`
+}
+
+type ListReq struct {
+	Page     int64  `form:"page,default=1"`
+	PageSize int64  `form:"pageSize,default=20"`
+	Keyword  string `form:"keyword,optional"`
 }
 
 type Response struct {
+	Code int         `json:"code"`
+	Msg  string      `json:"msg"`
+	Data interface{} `json:"data,omitempty"`
+}
+
+type UpdateReq struct {
+	Id   int64  `json:"id"`
+	Data string `json:"data"` // TODO: 替換為實際更新欄位
+}
+
+type UpdateStatusReq struct {
+	Id     int64 `json:"id"`
+	Status int64 `json:"status"`
 }

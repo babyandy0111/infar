@@ -15,15 +15,42 @@ func RegisterHandlers(server *rest.Server, serverCtx *svc.ServiceContext) {
 	server.AddRoutes(
 		[]rest.Route{
 			{
+				// 新增資料
 				Method:  http.MethodPost,
-				Path:    "/users/create",
-				Handler: CreateUserHandler(serverCtx),
+				Path:    "/create",
+				Handler: CreateHandler(serverCtx),
 			},
 			{
+				// 刪除資料
+				Method:  http.MethodDelete,
+				Path:    "/delete/:id",
+				Handler: DeleteHandler(serverCtx),
+			},
+			{
+				// 取得單筆資料
 				Method:  http.MethodGet,
-				Path:    "/users/id/:userId",
-				Handler: GetUserHandler(serverCtx),
+				Path:    "/get/:id",
+				Handler: GetHandler(serverCtx),
+			},
+			{
+				// 分頁列表
+				Method:  http.MethodGet,
+				Path:    "/list",
+				Handler: ListHandler(serverCtx),
+			},
+			{
+				// 狀態切換
+				Method:  http.MethodPatch,
+				Path:    "/status",
+				Handler: UpdateStatusHandler(serverCtx),
+			},
+			{
+				// 更新資料
+				Method:  http.MethodPut,
+				Path:    "/update",
+				Handler: UpdateHandler(serverCtx),
 			},
 		},
+		rest.WithPrefix("/v1/order"),
 	)
 }

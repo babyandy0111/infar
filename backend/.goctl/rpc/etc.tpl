@@ -1,5 +1,9 @@
 Name: {{.serviceName}}.rpc
 ListenOn: 0.0.0.0:INFAR_RPC_PORT_PLACEHOLDER
+
+Log:
+  Stat: false
+
 DataSource: host=127.0.0.1 port=5432 user=infar_admin password=InfarDbPass123 dbname=infar_db sslmode=disable
 CacheRedis:
   - Host: 127.0.0.1:6379

@@ -1,21 +1,78 @@
 syntax = "v1"
 
 info (
-	title:  "Infar Service API"
-	desc:   "Microservice API"
-	author: "andywang"
-	email:  "wang.shih.hua.tw@gmail.com"
+	title:  "Infar Order API"
+	desc:   "標準 CRUD 微服務 API"
+	author: "Infar Framework"
 )
 
-type request {}
+// =======================
+// 請求與回應結構
+// =======================
+type CreateReq {
+	Data string `json:"data"` // TODO: 替換為實際新增欄位
+}
 
-type response {}
+type UpdateReq {
+	Id   int64  `json:"id"`
+	Data string `json:"data"` // TODO: 替換為實際更新欄位
+}
 
+type DeleteReq {
+	Id int64 `path:"id"`
+}
+
+type GetReq {
+	Id int64 `path:"id"`
+}
+
+type ListReq {
+	Page     int64  `form:"page,default=1"`
+	PageSize int64  `form:"pageSize,default=20"`
+	Keyword  string `form:"keyword,optional"`
+}
+
+type UpdateStatusReq {
+	Id     int64 `json:"id"`
+	Status int64 `json:"status"`
+}
+
+type Response {
+	Code int         `json:"code"`
+	Msg  string      `json:"msg"`
+	Data interface{} `json:"data,omitempty"`
+}
+
+// =======================
+// 路由定義 (需 JWT 驗證請自行開啟 jwt: Auth)
+// =======================
+@server (
+	prefix: /v1/order
+// jwt: Auth
+)
 service order-api {
-	@handler GetUser // TODO: set handler name and delete this comment
-	get /users/id/:userId (request) returns (response)
+	@doc "新增資料"
+	@handler Create
+	post /create (CreateReq) returns (Response)
 
-	@handler CreateUser // TODO: set handler name and delete this comment
-	post /users/create (request)
+	@doc "更新資料"
+	@handler Update
+	put /update (UpdateReq) returns (Response)
+
+	@doc "刪除資料"
+	@handler Delete
+	delete /delete/:id (DeleteReq) returns (Response)
+
+	@doc "取得單筆資料"
+	@handler Get
+	get /get/:id (GetReq) returns (Response)
+
+	@doc "分頁列表"
+	@handler List
+	get /list (ListReq) returns (Response)
+
+	@doc "狀態切換"
+	@handler UpdateStatus
+	patch /status (UpdateStatusReq) returns (Response)
 }
 

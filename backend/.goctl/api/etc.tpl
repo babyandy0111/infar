@@ -2,6 +2,9 @@ Name: {{.serviceName}}
 Host: {{.host}}
 Port: INFAR_API_PORT_PLACEHOLDER
 
+Log:
+  Stat: false
+
 Auth:
   AccessSecret: infar-secret-2026
   AccessExpire: 86400

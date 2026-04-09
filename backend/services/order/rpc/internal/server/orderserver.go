@@ -9,12 +9,12 @@ import (
 
 	"infar/services/order/rpc/internal/logic"
 	"infar/services/order/rpc/internal/svc"
-	"infar/services/order/rpc/order"
+	"infar/services/order/rpc/pb"
 )
 
 type OrderServer struct {
 	svcCtx *svc.ServiceContext
-	order.UnimplementedOrderServer
+	pb.UnimplementedOrderServer
 }
 
 func NewOrderServer(svcCtx *svc.ServiceContext) *OrderServer {
@@ -23,7 +23,38 @@ func NewOrderServer(svcCtx *svc.ServiceContext) *OrderServer {
 	}
 }
 
-func (s *OrderServer) Ping(ctx context.Context, in *order.Request) (*order.Response, error) {
-	l := logic.NewPingLogic(ctx, s.svcCtx)
-	return l.Ping(in)
+// 1. 新增
+func (s *OrderServer) Create(ctx context.Context, in *pb.CreateReq) (*pb.Response, error) {
+	l := logic.NewCreateLogic(ctx, s.svcCtx)
+	return l.Create(in)
+}
+
+// 2. 更新
+func (s *OrderServer) Update(ctx context.Context, in *pb.UpdateReq) (*pb.Response, error) {
+	l := logic.NewUpdateLogic(ctx, s.svcCtx)
+	return l.Update(in)
+}
+
+// 3. 刪除
+func (s *OrderServer) Delete(ctx context.Context, in *pb.DeleteReq) (*pb.Response, error) {
+	l := logic.NewDeleteLogic(ctx, s.svcCtx)
+	return l.Delete(in)
+}
+
+// 4. 取得單筆
+func (s *OrderServer) Get(ctx context.Context, in *pb.GetReq) (*pb.Response, error) {
+	l := logic.NewGetLogic(ctx, s.svcCtx)
+	return l.Get(in)
+}
+
+// 5. 分頁列表
+func (s *OrderServer) List(ctx context.Context, in *pb.ListReq) (*pb.ListResponse, error) {
+	l := logic.NewListLogic(ctx, s.svcCtx)
+	return l.List(in)
+}
+
+// 6. 狀態切換
+func (s *OrderServer) UpdateStatus(ctx context.Context, in *pb.UpdateStatusReq) (*pb.Response, error) {
+	l := logic.NewUpdateStatusLogic(ctx, s.svcCtx)
+	return l.UpdateStatus(in)
 }

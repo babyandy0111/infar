@@ -43,15 +43,14 @@ goctl model pg datasource -url "postgres://infar_admin:InfarDbPass123@127.0.0.1:
 echo "📦 [2/4] 產生 RPC 層..."
 PROTO_FILE="$BASE_DIR/rpc/pb/$SERVICE_NAME.proto"
 if [ ! -f "$PROTO_FILE" ]; then
-    goctl rpc -o "$PROTO_FILE"
-    # 強制修正 proto 中的 package 與 service 名稱
-    sed -i '' "s/package .*/package pb;/g" "$PROTO_FILE"
-    sed -i '' "s/service .*/service ${CAP_SERVICE_NAME} {/g" "$PROTO_FILE"
+    # 使用標準規格模板
+    cp "$GOCTL_HOME/rpc_standard.tpl" "$PROTO_FILE"
+    sed -i '' "s/INFAR_CAP_SERVICE_NAME/$CAP_SERVICE_NAME/g" "$PROTO_FILE"
 fi
 goctl rpc protoc "$PROTO_FILE" --proto_path="$BASE_DIR/rpc/pb" --go_out="$BASE_DIR/rpc" --go-grpc_out="$BASE_DIR/rpc" --zrpc_out="$BASE_DIR/rpc" -c --home "$GOCTL_HOME"
 rm -f "$BASE_DIR/rpc/pb.go" "$BASE_DIR/rpc/etc/pb.yaml"
 
-# 💉 替換 RPC 內核 Flag (對齊 rpc/svc.tpl)
+# 💉 替換 RPC 內核 Flag
 RPC_SVC_FILE="$BASE_DIR/rpc/internal/svc/servicecontext.go"
 sed -i '' "s/INFAR_SERVICE_NAME/$SERVICE_NAME/g" "$RPC_SVC_FILE"
 sed -i '' "s/INFAR_MODEL_INTERFACE/$MODEL_INTERFACE/g" "$RPC_SVC_FILE"
@@ -60,15 +59,22 @@ sed -i '' "s/INFAR_MODEL_INTERFACE/$MODEL_INTERFACE/g" "$RPC_SVC_FILE"
 echo "🌐 [3/4] 產生 API 層..."
 API_DESC="$BASE_DIR/api/desc/$SERVICE_NAME.api"
 if [ ! -f "$API_DESC" ]; then
-    goctl api template -o "$API_DESC"
-    sed -i '' 's/title: \/\/ TODO.*/title: "Infar Service API"/g' "$API_DESC"
-    sed -i '' 's/desc: \/\/ TODO.*/desc: "Microservice API"/g' "$API_DESC"
+    # 使用標準規格模板
+    cp "$GOCTL_HOME/api_standard.tpl" "$API_DESC"
+    sed -i '' "s/INFAR_CAP_SERVICE_NAME/$CAP_SERVICE_NAME/g" "$API_DESC"
+    sed -i '' "s/INFAR_SERVICE_NAME/$SERVICE_NAME/g" "$API_DESC"
+    LOWER_SERVICE_NAME=$(echo "$SERVICE_NAME" | tr '[:upper:]' '[:lower:]')
+    sed -i '' "s/INFAR_LOWER_SERVICE_NAME/$LOWER_SERVICE_NAME/g" "$API_DESC"
 fi
 # 移除 main 檔案以便 goctl 重新根據模板產生
 rm -f "$BASE_DIR/api/$SERVICE_NAME.go"
 goctl api go -api "$API_DESC" -dir "$BASE_DIR/api" --home "$GOCTL_HOME"
 
-# 💉 替換 API 內核 Flag (對齊 api/config.tpl & api/context.tpl)
+# 🧠 動態尋找真正的 RPC Client 資料夾名稱 (可能是 order 或 orderclient)
+# 它會是 rpc/ 目錄下除了 pb, etc, internal, docker, k8s 以外的唯一一個目錄
+CLIENT_DIR_NAME=$(find "$BASE_DIR/rpc" -mindepth 1 -maxdepth 1 -type d | grep -vE '/(pb|etc|internal|docker|k8s)$' | xargs basename)
+
+# 💉 替換 API 內核 Flag
 API_CONFIG_FILE="$BASE_DIR/api/internal/config/config.go"
 API_SVC_FILE="$BASE_DIR/api/internal/svc/servicecontext.go"
 
@@ -76,10 +82,27 @@ API_SVC_FILE="$BASE_DIR/api/internal/svc/servicecontext.go"
 sed -i '' "s/INFAR_CAP_SERVICE_NAME_RPCCONF/${CAP_SERVICE_NAME}Rpc/g" "$API_CONFIG_FILE"
 
 # 修正 Context 取代 (由長到短，避免子字串覆蓋)
+sed -i '' "s/INFAR_CLIENT_DIR_NAME/${CLIENT_DIR_NAME}/g" "$API_SVC_FILE" # 使用動態解析出來的資料夾名
 sed -i '' "s/INFAR_CAP_SERVICE_NAME_RPCCLIENT/${CAP_SERVICE_NAME}Rpc/g" "$API_SVC_FILE"
 sed -i '' "s/INFAR_CAP_SERVICE_NAME_RPCCONF/${CAP_SERVICE_NAME}Rpc/g" "$API_SVC_FILE"
 sed -i '' "s/INFAR_CAP_SERVICE_NAME/$CAP_SERVICE_NAME/g" "$API_SVC_FILE"
 sed -i '' "s/INFAR_SERVICE_NAME/$SERVICE_NAME/g" "$API_SVC_FILE"
+
+# 🧠 注入 Logic 層與 Handler 層的實體名稱 (Model & Client & Swagger)
+# 注入 Logic
+find "$BASE_DIR/api/internal/logic" -name "*.go" -type f -exec sed -i '' "s/INFAR_CAP_SERVICE_NAME_RPCCLIENT/${CAP_SERVICE_NAME}Rpc/g" {} +
+find "$BASE_DIR/api/internal/logic" -name "*.go" -type f -exec sed -i '' "s/INFAR_CLIENT_DIR_NAME/${CLIENT_DIR_NAME}/g" {} +
+find "$BASE_DIR/api/internal/logic" -name "*.go" -type f -exec sed -i '' "s/INFAR_SERVICE_NAME/$SERVICE_NAME/g" {} +
+
+# 注入 Handler (Swagger Annotations)
+find "$BASE_DIR/api/internal/handler" -name "*.go" -type f -exec sed -i '' "s/INFAR_CAP_SERVICE_NAME/$CAP_SERVICE_NAME/g" {} +
+find "$BASE_DIR/api/internal/handler" -name "*.go" -type f -exec sed -i '' "s/INFAR_LOWER_SERVICE_NAME/$LOWER_SERVICE_NAME/g" {} +
+find "$BASE_DIR/api/internal/handler" -name "*.go" -type f -exec sed -i '' "s/INFAR_SERVICE_NAME/$SERVICE_NAME/g" {} +
+
+# RPC Logic 處理 (注入 Model)
+# CAP_TABLE_NAME 通常對應 Struct 名稱 (例如 Orders)
+find "$BASE_DIR/rpc/internal/logic" -name "*.go" -type f -exec sed -i '' "s/INFAR_MODEL_INTERFACE/${MODEL_INTERFACE}/g" {} +
+find "$BASE_DIR/rpc/internal/logic" -name "*.go" -type f -exec sed -i '' "s/INFAR_MODEL_STRUCT/${CAP_TABLE_NAME}/g" {} +
 
 # 📚 Swagger 初始化
 (cd "$BASE_DIR/api" && swag init -q -g $SERVICE_NAME.go)

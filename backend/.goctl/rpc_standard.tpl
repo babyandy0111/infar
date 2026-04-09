@@ -4,7 +4,7 @@ package pb;
 option go_package = "./pb";
 
 // =======================
-// Order 標準請求與回應結構
+// INFAR_CAP_SERVICE_NAME 標準請求與回應結構
 // =======================
 
 message CreateReq {
@@ -49,9 +49,9 @@ message ListResponse {
 }
 
 // =======================
-// Order 服務定義
+// INFAR_CAP_SERVICE_NAME 服務定義
 // =======================
-service Order {
+service INFAR_CAP_SERVICE_NAME {
     // 1. 新增
     rpc Create(CreateReq) returns (Response);
     // 2. 更新

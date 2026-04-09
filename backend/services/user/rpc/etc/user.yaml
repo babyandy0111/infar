@@ -8,3 +8,7 @@ DataSource: postgres://infar_admin:InfarDbPass123@127.0.0.1:5432/infar_db?sslmod
 CacheRedis:
   - Host: 127.0.0.1:6379
     Pass: InfarDbPass123
+
+Log:
+  Stat: false
+

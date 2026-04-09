@@ -1,4 +1,172 @@
+definitions:
+  types.CreateReq:
+    properties:
+      data:
+        description: 'TODO: 替換為實際新增欄位'
+        type: string
+    type: object
+  types.Response:
+    properties:
+      code:
+        type: integer
+      data: {}
+      msg:
+        type: string
+    type: object
+  types.UpdateReq:
+    properties:
+      data:
+        description: 'TODO: 替換為實際更新欄位'
+        type: string
+      id:
+        type: integer
+    type: object
+  types.UpdateStatusReq:
+    properties:
+      id:
+        type: integer
+      status:
+        type: integer
+    type: object
 info:
   contact: {}
-paths: {}
+paths:
+  /v1/order/create:
+    post:
+      consumes:
+      - application/json
+      description: 執行 CreateHandler 動作
+      parameters:
+      - description: 建立參數
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.CreateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.Response'
+      summary: CreateHandler
+      tags:
+      - Order
+  /v1/order/delete/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: 執行 DeleteHandler 動作
+      parameters:
+      - description: 流水號
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.Response'
+      summary: DeleteHandler
+      tags:
+      - Order
+  /v1/order/get/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 執行 GetHandler 動作
+      parameters:
+      - description: 流水號
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.Response'
+      summary: GetHandler
+      tags:
+      - Order
+  /v1/order/list:
+    get:
+      consumes:
+      - application/json
+      description: 執行 ListHandler 動作
+      parameters:
+      - default: 1
+        description: 頁碼
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: 每頁筆數
+        in: query
+        name: pageSize
+        type: integer
+      - description: 關鍵字
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.Response'
+      summary: ListHandler
+      tags:
+      - Order
+  /v1/order/status:
+    patch:
+      consumes:
+      - application/json
+      description: 執行 UpdateStatusHandler 動作
+      parameters:
+      - description: 狀態更新參數
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.UpdateStatusReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.Response'
+      summary: UpdateStatusHandler
+      tags:
+      - Order
+  /v1/order/update:
+    put:
+      consumes:
+      - application/json
+      description: 執行 UpdateHandler 動作
+      parameters:
+      - description: 更新參數
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/types.UpdateReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/types.Response'
+      summary: UpdateHandler
+      tags:
+      - Order
 swagger: "2.0"
