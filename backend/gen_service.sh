@@ -2,145 +2,136 @@
 set -e
 
 # ==============================================================
-# Infar 微服務生產線 (v6.0 模板 Flag 替換版)
+# Infar 微服務智能生產線 v7.5 (終極修復設定檔版)
 # ==============================================================
 
 SERVICE_NAME=$1
 TABLE_NAME=$2
-API_PORT=$3
-RPC_PORT=$4
+PORT_ID=$3
 DOCKER_USER="babyandy0111"
+DB_URL="postgres://infar_admin:InfarDbPass123@127.0.0.1:5432/infar_db?sslmode=disable"
 
-if [ -z "$SERVICE_NAME" ] || [ -z "$TABLE_NAME" ]; then
-    echo "❌ 錯誤: 請提供服務名稱與資料表名稱"
+if [ -z "$SERVICE_NAME" ] || [ -z "$TABLE_NAME" ] || [ -z "$PORT_ID" ]; then
+    echo "❌ 錯誤: 使用方式 -> ./gen_service.sh [服務名] [資料表名] [Port後三碼]"
+    echo "範例: ./gen_service.sh order orders 889"
     exit 1
 fi
 
-API_PORT=${API_PORT:-8889}
-RPC_PORT=${RPC_PORT:-9091}
+API_PORT="8$PORT_ID"
+RPC_PORT="9$PORT_ID"
 ROOT_DIR=$(pwd)
 BASE_DIR="$ROOT_DIR/services/$SERVICE_NAME"
 GOCTL_HOME="$ROOT_DIR/.goctl"
-
 CAP_SERVICE_NAME=$(echo "$SERVICE_NAME" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
 CAP_TABLE_NAME=$(echo "$TABLE_NAME" | awk '{print toupper(substr($0,1,1))substr($0,2)}')
 MODEL_INTERFACE="${CAP_TABLE_NAME}Model"
 
-echo "🔍 [0/4] 檢查環境與精準清場..."
+echo "🔍 [0/5] 環境檢查與精準清場 (Port: API $API_PORT / RPC $RPC_PORT)..."
 export PATH=$PATH:$(go env GOPATH)/bin:/usr/local/bin
-
-# 清理舊檔案，確保重新產生
-rm -rf "$BASE_DIR/rpc/pb"/*.go
-rm -rf "$BASE_DIR/rpc/${SERVICE_NAME}client"
-rm -rf "$BASE_DIR/api/internal/types"/*.go
 mkdir -p $BASE_DIR/{api/desc,api/docker,api/k8s,rpc/pb,rpc/docker,rpc/k8s,model}
 
-# 1. Model
-echo "📂 [1/4] 產生 Model 層 ($TABLE_NAME -> $MODEL_INTERFACE)..."
-goctl model pg datasource -url "postgres://infar_admin:InfarDbPass123@127.0.0.1:5432/infar_db?sslmode=disable" -t "$TABLE_NAME" -dir "$BASE_DIR/model" -c
+# 1. 資料庫欄位解析
+echo "🧬 [1/5] 從資料庫提取欄位資訊..."
+COLUMNS=$(psql "$DB_URL" -t -A -F"," -c "SELECT column_name, udt_name, ordinal_position FROM information_schema.columns WHERE table_name = '$TABLE_NAME' AND table_schema = 'public' ORDER BY ordinal_position;" || echo "")
 
-# 2. RPC
-echo "📦 [2/4] 產生 RPC 層..."
+PROTO_FIELDS_FILE=$(mktemp /tmp/proto_fields.XXXXXX)
+API_FIELDS_FILE=$(mktemp /tmp/api_fields.XXXXXX)
+
+if [ -z "$COLUMNS" ]; then
+    echo "    string data = 2;" > "$PROTO_FIELDS_FILE"
+    echo "    Data string \`json:\"data\"\`" > "$API_FIELDS_FILE"
+else
+    > "$PROTO_FIELDS_FILE"
+    > "$API_FIELDS_FILE"
+    while IFS=',' read -r col_name udt_type ordinal; do
+        [[ "$col_name" == "id" || "$col_name" == "created_at" || "$col_name" == "updated_at" ]] && continue
+        case $udt_type in
+            int8|bigint) pt="int64"; gt="int64" ;;
+            int4|integer) pt="int32"; gt="int32" ;;
+            bool|boolean) pt="bool"; gt="bool" ;;
+            float8|numeric|double) pt="double"; gt="float64" ;;
+            *) pt="string"; gt="string" ;;
+        esac
+        camel=$(echo "$col_name" | awk -F_ '{for(i=1;i<=NF;i++){$i=toupper(substr($i,1,1))substr($i,2)}}1' OFS="")
+        echo "    $pt $col_name = $ordinal;" >> "$PROTO_FIELDS_FILE"
+        echo "    $camel $gt \`json:\"$col_name\"\`" >> "$API_FIELDS_FILE"
+    done <<< "$COLUMNS"
+fi
+
+# 2. Model 生成
+echo "📂 [2/5] 產生 Model 層..."
+goctl model pg datasource -url "$DB_URL" -t "$TABLE_NAME" -dir "$BASE_DIR/model" -c
+
+# 3. RPC 層生成
+echo "📦 [3/5] 產出 RPC 定義與代碼..."
 PROTO_FILE="$BASE_DIR/rpc/pb/$SERVICE_NAME.proto"
-if [ ! -f "$PROTO_FILE" ]; then
-    # 使用標準規格模板
-    cp "$GOCTL_HOME/rpc_standard.tpl" "$PROTO_FILE"
-    sed -i '' "s/INFAR_CAP_SERVICE_NAME/$CAP_SERVICE_NAME/g" "$PROTO_FILE"
-fi
+cp "$GOCTL_HOME/rpc_standard.tpl" "$PROTO_FILE"
+sed -i '' "s/INFAR_CAP_SERVICE_NAME/$CAP_SERVICE_NAME/g" "$PROTO_FILE"
+PROTO_CONTENT=$(cat "$PROTO_FIELDS_FILE")
+perl -i -0777 -pe "s/(message CreateReq \{)(.*?)(\})/\$1\n$PROTO_CONTENT\n\$3/s" "$PROTO_FILE"
+perl -i -0777 -pe "s/(message UpdateReq \{)(.*?)(\})/\$1\n    int64 id = 1;\n$PROTO_CONTENT\n\$3/s" "$PROTO_FILE"
 goctl rpc protoc "$PROTO_FILE" --proto_path="$BASE_DIR/rpc/pb" --go_out="$BASE_DIR/rpc" --go-grpc_out="$BASE_DIR/rpc" --zrpc_out="$BASE_DIR/rpc" -c --home "$GOCTL_HOME"
-rm -f "$BASE_DIR/rpc/pb.go" "$BASE_DIR/rpc/etc/pb.yaml"
 
-# 💉 替換 RPC 內核 Flag
-RPC_SVC_FILE="$BASE_DIR/rpc/internal/svc/servicecontext.go"
-sed -i '' "s/INFAR_SERVICE_NAME/$SERVICE_NAME/g" "$RPC_SVC_FILE"
-sed -i '' "s/INFAR_MODEL_INTERFACE/$MODEL_INTERFACE/g" "$RPC_SVC_FILE"
-
-# 3. API
-echo "🌐 [3/4] 產生 API 層..."
-API_DESC="$BASE_DIR/api/desc/$SERVICE_NAME.api"
-if [ ! -f "$API_DESC" ]; then
-    # 使用標準規格模板
-    cp "$GOCTL_HOME/api_standard.tpl" "$API_DESC"
-    sed -i '' "s/INFAR_CAP_SERVICE_NAME/$CAP_SERVICE_NAME/g" "$API_DESC"
-    sed -i '' "s/INFAR_SERVICE_NAME/$SERVICE_NAME/g" "$API_DESC"
-    LOWER_SERVICE_NAME=$(echo "$SERVICE_NAME" | tr '[:upper:]' '[:lower:]')
-    sed -i '' "s/INFAR_LOWER_SERVICE_NAME/$LOWER_SERVICE_NAME/g" "$API_DESC"
+# 重新命名 main 啟動檔 (因為 goctl 預設以 package 命名，我們統一以服務命名)
+if [ -f "$BASE_DIR/rpc/pb.go" ]; then
+    mv "$BASE_DIR/rpc/pb.go" "$BASE_DIR/rpc/$SERVICE_NAME.go"
 fi
-# 移除 main 檔案以便 goctl 重新根據模板產生
+if [ -f "$BASE_DIR/rpc/etc/pb.yaml" ]; then
+    mv "$BASE_DIR/rpc/etc/pb.yaml" "$BASE_DIR/rpc/etc/$SERVICE_NAME.yaml"
+fi
+
+# 4. API 層生成
+echo "🌐 [4/5] 產出 API 定義與代碼..."
+API_DESC="$BASE_DIR/api/desc/$SERVICE_NAME.api"
+cp "$GOCTL_HOME/api_standard.tpl" "$API_DESC"
+sed -i '' "s/INFAR_CAP_SERVICE_NAME/$CAP_SERVICE_NAME/g" "$API_DESC"
+sed -i '' "s/INFAR_SERVICE_NAME/$SERVICE_NAME/g" "$API_DESC"
+LOWER_SERVICE_NAME=$(echo "$SERVICE_NAME" | tr '[:upper:]' '[:lower:]')
+sed -i '' "s/INFAR_LOWER_SERVICE_NAME/$LOWER_SERVICE_NAME/g" "$API_DESC"
+API_CONTENT=$(cat "$API_FIELDS_FILE")
+perl -i -0777 -pe "s/(type CreateReq \{)(.*?)(\})/\$1\n$API_CONTENT\n\$3/s" "$API_DESC"
+perl -i -0777 -pe "s/(type UpdateReq \{)(.*?)(\})/\$1\n    Id int64 \`json:\"id\"\`\n$API_CONTENT\n\$3/s" "$API_DESC"
 rm -f "$BASE_DIR/api/$SERVICE_NAME.go"
 goctl api go -api "$API_DESC" -dir "$BASE_DIR/api" --home "$GOCTL_HOME"
 
-# 🧠 動態尋找真正的 RPC Client 資料夾名稱 (可能是 order 或 orderclient)
-# 它會是 rpc/ 目錄下除了 pb, etc, internal, docker, k8s 以外的唯一一個目錄
+# 5. Infar 內核注入 (精確替換標籤)
+echo "💉 [5/5] 執行 Infar 內核注入與運維產出..."
+# 獲取正確的 Client 目錄名 (例如 order)
 CLIENT_DIR_NAME=$(find "$BASE_DIR/rpc" -mindepth 1 -maxdepth 1 -type d | grep -vE '/(pb|etc|internal|docker|k8s)$' | xargs basename)
 
-# 💉 替換 API 內核 Flag
-API_CONFIG_FILE="$BASE_DIR/api/internal/config/config.go"
-API_SVC_FILE="$BASE_DIR/api/internal/svc/servicecontext.go"
+# 執行全域標籤替換
+find "$BASE_DIR" -name "*.go" -type f -exec sed -i '' "s/INFAR_CAP_SERVICE_NAME_RPCCONF/${CAP_SERVICE_NAME}Rpc/g" {} +
+find "$BASE_DIR" -name "*.go" -type f -exec sed -i '' "s/INFAR_CAP_SERVICE_NAME_RPCCLIENT/${CAP_SERVICE_NAME}Rpc/g" {} +
+find "$BASE_DIR" -name "*.go" -type f -exec sed -i '' "s/INFAR_CLIENT_DIR_NAME/${CLIENT_DIR_NAME}/g" {} +
+find "$BASE_DIR" -name "*.go" -type f -exec sed -i '' "s/INFAR_CAP_SERVICE_NAME/$CAP_SERVICE_NAME/g" {} +
+find "$BASE_DIR" -name "*.go" -type f -exec sed -i '' "s/INFAR_SERVICE_NAME/$SERVICE_NAME/g" {} +
+find "$BASE_DIR" -name "*.go" -type f -exec sed -i '' "s/INFAR_MODEL_INTERFACE/${MODEL_INTERFACE}/g" {} +
+find "$BASE_DIR" -name "*.go" -type f -exec sed -i '' "s/INFAR_MODEL_STRUCT/${CAP_TABLE_NAME}/g" {} +
+find "$BASE_DIR" -name "*.go" -type f -exec sed -i '' "s/INFAR_LOWER_SERVICE_NAME/$LOWER_SERVICE_NAME/g" {} +
 
-# 修正 Config 取代
-sed -i '' "s/INFAR_CAP_SERVICE_NAME_RPCCONF/${CAP_SERVICE_NAME}Rpc/g" "$API_CONFIG_FILE"
-
-# 修正 Context 取代 (由長到短，避免子字串覆蓋)
-sed -i '' "s/INFAR_CLIENT_DIR_NAME/${CLIENT_DIR_NAME}/g" "$API_SVC_FILE" # 使用動態解析出來的資料夾名
-sed -i '' "s/INFAR_CAP_SERVICE_NAME_RPCCLIENT/${CAP_SERVICE_NAME}Rpc/g" "$API_SVC_FILE"
-sed -i '' "s/INFAR_CAP_SERVICE_NAME_RPCCONF/${CAP_SERVICE_NAME}Rpc/g" "$API_SVC_FILE"
-sed -i '' "s/INFAR_CAP_SERVICE_NAME/$CAP_SERVICE_NAME/g" "$API_SVC_FILE"
-sed -i '' "s/INFAR_SERVICE_NAME/$SERVICE_NAME/g" "$API_SVC_FILE"
-
-# 🧠 注入 Logic 層與 Handler 層的實體名稱 (Model & Client & Swagger)
-# 注入 Logic
-find "$BASE_DIR/api/internal/logic" -name "*.go" -type f -exec sed -i '' "s/INFAR_CAP_SERVICE_NAME_RPCCLIENT/${CAP_SERVICE_NAME}Rpc/g" {} +
-find "$BASE_DIR/api/internal/logic" -name "*.go" -type f -exec sed -i '' "s/INFAR_CLIENT_DIR_NAME/${CLIENT_DIR_NAME}/g" {} +
-find "$BASE_DIR/api/internal/logic" -name "*.go" -type f -exec sed -i '' "s/INFAR_SERVICE_NAME/$SERVICE_NAME/g" {} +
-
-# 注入 Handler (Swagger Annotations)
-find "$BASE_DIR/api/internal/handler" -name "*.go" -type f -exec sed -i '' "s/INFAR_CAP_SERVICE_NAME/$CAP_SERVICE_NAME/g" {} +
-find "$BASE_DIR/api/internal/handler" -name "*.go" -type f -exec sed -i '' "s/INFAR_LOWER_SERVICE_NAME/$LOWER_SERVICE_NAME/g" {} +
-find "$BASE_DIR/api/internal/handler" -name "*.go" -type f -exec sed -i '' "s/INFAR_SERVICE_NAME/$SERVICE_NAME/g" {} +
-
-# RPC Logic 處理 (注入 Model)
-# CAP_TABLE_NAME 通常對應 Struct 名稱 (例如 Orders)
-find "$BASE_DIR/rpc/internal/logic" -name "*.go" -type f -exec sed -i '' "s/INFAR_MODEL_INTERFACE/${MODEL_INTERFACE}/g" {} +
-find "$BASE_DIR/rpc/internal/logic" -name "*.go" -type f -exec sed -i '' "s/INFAR_MODEL_STRUCT/${CAP_TABLE_NAME}/g" {} +
-
-# 📚 Swagger 初始化
-(cd "$BASE_DIR/api" && swag init -q -g $SERVICE_NAME.go)
-# 注入 Swagger 導引
+(cd "$BASE_DIR/api" && swag init -q -g $SERVICE_NAME.go || true)
 sed -i '' "/import (/a\\
 	_ \"infar/services/$SERVICE_NAME/api/docs\"
 " "$BASE_DIR/api/$SERVICE_NAME.go"
 
-# 4. 運維與配置
-echo "🐳 [4/4] 更新運維配置與 YAML..."
-if [ ! -f "$BASE_DIR/rpc/docker/Dockerfile" ]; then
-    rm -f Dockerfile
-    RPC_MAIN=$(find "$BASE_DIR/rpc" -maxdepth 1 -name "*.go" | head -n 1)
-    goctl docker -go "$RPC_MAIN" -exe "$SERVICE_NAME-rpc" --port $RPC_PORT --home "$GOCTL_HOME" && mv Dockerfile "$BASE_DIR/rpc/docker/Dockerfile"
-fi
-if [ ! -f "$BASE_DIR/api/docker/Dockerfile" ]; then
-    rm -f Dockerfile
-    API_MAIN=$(find "$BASE_DIR/api" -maxdepth 1 -name "*.go" | head -n 1)
-    goctl docker -go "$API_MAIN" -exe "$SERVICE_NAME-api" --port $API_PORT --home "$GOCTL_HOME" && mv Dockerfile "$BASE_DIR/api/docker/Dockerfile"
-fi
-cp "$GOCTL_HOME/kube/rpc.tpl" "$GOCTL_HOME/kube/deployment.tpl"
-goctl kube deploy -name "$SERVICE_NAME-rpc" -namespace app -image "$DOCKER_USER/infar-$SERVICE_NAME-rpc:v1" -port "$RPC_PORT" --home "$GOCTL_HOME" -o "$BASE_DIR/rpc/k8s/$SERVICE_NAME-rpc.yaml"
-cp "$GOCTL_HOME/kube/api.tpl" "$GOCTL_HOME/kube/deployment.tpl"
+API_MAIN=$(find "$BASE_DIR/api" -maxdepth 1 -name "*.go" | head -n 1)
+RPC_MAIN=$(find "$BASE_DIR/rpc" -maxdepth 1 -name "*.go" | head -n 1)
+goctl docker -go "$API_MAIN" -exe "$SERVICE_NAME-api" --port $API_PORT --home "$GOCTL_HOME" && mv Dockerfile "$BASE_DIR/api/docker/Dockerfile"
+goctl docker -go "$RPC_MAIN" -exe "$SERVICE_NAME-rpc" --port $RPC_PORT --home "$GOCTL_HOME" && mv Dockerfile "$BASE_DIR/rpc/docker/Dockerfile"
 goctl kube deploy -name "$SERVICE_NAME-api" -namespace app -image "$DOCKER_USER/infar-$SERVICE_NAME-api:v1" -port "$API_PORT" --home "$GOCTL_HOME" -o "$BASE_DIR/api/k8s/$SERVICE_NAME-api.yaml"
+goctl kube deploy -name "$SERVICE_NAME-rpc" -namespace app -image "$DOCKER_USER/infar-$SERVICE_NAME-rpc:v1" -port "$RPC_PORT" --home "$GOCTL_HOME" -o "$BASE_DIR/rpc/k8s/$SERVICE_NAME-rpc.yaml"
 
-# ⚙️ 設定檔佔位符替換
-RPC_YAML=$(find "$BASE_DIR/rpc/etc" -maxdepth 1 -name "*.yaml" | head -n 1)
-[[ -n "$RPC_YAML" ]] && sed -i '' "s/INFAR_RPC_PORT_PLACEHOLDER/$RPC_PORT/g" "$RPC_YAML"
 API_YAML=$(find "$BASE_DIR/api/etc" -maxdepth 1 -name "*.yaml" | head -n 1)
+RPC_YAML=$(find "$BASE_DIR/rpc/etc" -maxdepth 1 -name "*.yaml" | head -n 1)
 if [ -n "$API_YAML" ]; then
-    sed -i '' "s/INFAR_RPC_NAME_PLACEHOLDER/${CAP_SERVICE_NAME}Rpc/g" "$API_YAML"
-    sed -i '' "s/INFAR_RPC_PORT_PLACEHOLDER/$RPC_PORT/g" "$API_YAML"
     sed -i '' "s/INFAR_API_PORT_PLACEHOLDER/$API_PORT/g" "$API_YAML"
+    sed -i '' "s/INFAR_RPC_PORT_PLACEHOLDER/$RPC_PORT/g" "$API_YAML"
+    sed -i '' "s/INFAR_RPC_NAME_PLACEHOLDER/${CAP_SERVICE_NAME}Rpc/g" "$API_YAML"
 fi
+[[ -n "$RPC_YAML" ]] && sed -i '' "s/INFAR_RPC_PORT_PLACEHOLDER/$RPC_PORT/g" "$RPC_YAML"
 
 (cd "$ROOT_DIR" && go mod tidy && go fmt ./...)
-
 echo "========================================="
-echo "🎉 Infar 服務工廠 v6.0 (純淨 Flag 驅動) 完成！"
-echo "✅ 100% 透過 .tpl 模板產出，腳本僅負責替換 Flag。"
+echo "🎉 Infar 智能工廠 v7.5 完成！"
+echo "✅ 修復了配置檔命名 (pb.yaml -> $SERVICE_NAME.yaml) 問題。"
 echo "========================================="

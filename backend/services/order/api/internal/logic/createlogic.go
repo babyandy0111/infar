@@ -2,9 +2,11 @@ package logic
 
 import (
 	"context"
+	"fmt"
 
 	"infar/services/order/api/internal/svc"
 	"infar/services/order/api/internal/types"
+	"infar/services/user/rpc/userclient"
 
 	"github.com/zeromicro/go-zero/core/logx"
 )
@@ -25,20 +27,23 @@ func NewCreateLogic(ctx context.Context, svcCtx *svc.ServiceContext) *CreateLogi
 }
 
 func (l *CreateLogic) Create(req *types.CreateReq) (resp *types.Response, err error) {
-	// 💡 Infar Auto-Generated API Logic Scaffolding
-	// 這裡負責呼叫 RPC 層的 Create 方法
+	// 1. 跨服務調用：調用 User RPC 驗證用戶是否存在
+	// 這裡我們把 req.UserId 傳給 user-rpc
+	userRes, err := l.svcCtx.UserRpc.UserInfo(l.ctx, &userclient.UserInfoRequest{
+		Id: int64(req.UserId),
+	})
 
-	/*
-		rpcResp, err := l.svcCtx.OrderRpc.Create(l.ctx, &order.CreateReq{
-			// TODO: 1. 映射 API 請求欄位到 RPC 請求
-			// Data: req.Data,
-		})
-		if err != nil {
-			return nil, err
-		}
-		return &types.Response{Msg: rpcResp.Msg}, nil
-	*/
+	if err != nil {
+		l.Logger.Errorf("🚨 跨服務調用失敗，用戶驗證不通過: %v", err)
+		return &types.Response{
+			Msg: fmt.Sprintf("錯誤: 找不到 UserId 為 %d 的用戶！", req.UserId),
+		}, nil
+	}
 
-	// TODO: 請實作具體轉發邏輯或解除上述註解
-	return
+	l.Logger.Infof("✅ 跨服務調用成功！用戶暱稱: %s, 準備為其建立訂單: %s", userRes.Nickname, req.OrderNo)
+
+	// 這裡先不呼叫 OrderRpc，單純展示互通成功的回傳
+	return &types.Response{
+		Msg: fmt.Sprintf("跨服務驗證成功！歡迎 %s 建立訂單 %s", userRes.Nickname, req.OrderNo),
+	}, nil
 }

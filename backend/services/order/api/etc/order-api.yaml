@@ -11,4 +11,8 @@ Auth:
 
 OrderRpc:
   Endpoints:
-    - 127.0.0.1:9091
+    - 127.0.0.1:9889
+
+UserRpc:
+  Endpoints:
+    - 127.0.0.1:9090

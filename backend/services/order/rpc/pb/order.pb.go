@@ -23,7 +23,10 @@ const (
 
 type CreateReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Data          string                 `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"` // TODO: 替換為實際新增欄位
+	UserId        int32                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	OrderNo       string                 `protobuf:"bytes,3,opt,name=order_no,json=orderNo,proto3" json:"order_no,omitempty"`
+	Amount        float64                `protobuf:"fixed64,4,opt,name=amount,proto3" json:"amount,omitempty"`
+	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -58,9 +61,30 @@ func (*CreateReq) Descriptor() ([]byte, []int) {
 	return file_order_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *CreateReq) GetData() string {
+func (x *CreateReq) GetUserId() int32 {
 	if x != nil {
-		return x.Data
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *CreateReq) GetOrderNo() string {
+	if x != nil {
+		return x.OrderNo
+	}
+	return ""
+}
+
+func (x *CreateReq) GetAmount() float64 {
+	if x != nil {
+		return x.Amount
+	}
+	return 0
+}
+
+func (x *CreateReq) GetStatus() string {
+	if x != nil {
+		return x.Status
 	}
 	return ""
 }
@@ -68,7 +92,10 @@ func (x *CreateReq) GetData() string {
 type UpdateReq struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            int64                  `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	Data          string                 `protobuf:"bytes,2,opt,name=data,proto3" json:"data,omitempty"` // TODO: 替換為實際更新欄位
+	UserId        int32                  `protobuf:"varint,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	OrderNo       string                 `protobuf:"bytes,3,opt,name=order_no,json=orderNo,proto3" json:"order_no,omitempty"`
+	Amount        float64                `protobuf:"fixed64,4,opt,name=amount,proto3" json:"amount,omitempty"`
+	Status        string                 `protobuf:"bytes,5,opt,name=status,proto3" json:"status,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -110,9 +137,30 @@ func (x *UpdateReq) GetId() int64 {
 	return 0
 }
 
-func (x *UpdateReq) GetData() string {
+func (x *UpdateReq) GetUserId() int32 {
 	if x != nil {
-		return x.Data
+		return x.UserId
+	}
+	return 0
+}
+
+func (x *UpdateReq) GetOrderNo() string {
+	if x != nil {
+		return x.OrderNo
+	}
+	return ""
+}
+
+func (x *UpdateReq) GetAmount() float64 {
+	if x != nil {
+		return x.Amount
+	}
+	return 0
+}
+
+func (x *UpdateReq) GetStatus() string {
+	if x != nil {
+		return x.Status
 	}
 	return ""
 }
@@ -435,12 +483,18 @@ var File_order_proto protoreflect.FileDescriptor
 
 const file_order_proto_rawDesc = "" +
 	"\n" +
-	"\vorder.proto\x12\x02pb\"\x1f\n" +
-	"\tCreateReq\x12\x12\n" +
-	"\x04data\x18\x01 \x01(\tR\x04data\"/\n" +
+	"\vorder.proto\x12\x02pb\"o\n" +
+	"\tCreateReq\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\x05R\x06userId\x12\x19\n" +
+	"\border_no\x18\x03 \x01(\tR\aorderNo\x12\x16\n" +
+	"\x06amount\x18\x04 \x01(\x01R\x06amount\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\"\x7f\n" +
 	"\tUpdateReq\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x12\n" +
-	"\x04data\x18\x02 \x01(\tR\x04data\"\x1b\n" +
+	"\x02id\x18\x01 \x01(\x03R\x02id\x12\x17\n" +
+	"\auser_id\x18\x02 \x01(\x05R\x06userId\x12\x19\n" +
+	"\border_no\x18\x03 \x01(\tR\aorderNo\x12\x16\n" +
+	"\x06amount\x18\x04 \x01(\x01R\x06amount\x12\x16\n" +
+	"\x06status\x18\x05 \x01(\tR\x06status\"\x1b\n" +
 	"\tDeleteReq\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\"\x18\n" +
 	"\x06GetReq\x12\x0e\n" +

@@ -6,12 +6,18 @@ metadata:
 data:
   order-rpc.yaml: |
     Name: order-rpc
-    ListenOn: 0.0.0.0:9091
-    DataSource: host=postgres.infra.svc.cluster.local port=5432 user=infar_admin password=InfarDbPass123 dbname=infar_db sslmode=disable
-    CacheRedis:
-      - Host: redis-master.infra.svc.cluster.local:6379
-        Pass: InfarDbPass123
-        Type: node
+    Host: 0.0.0.0
+    Port: 9889
+    Auth:
+      AccessSecret: infar-secret-2026
+      AccessExpire: 86400
+    # 這裡的名稱會在腳本中處理，或是維持通用
+    OrderRpc:
+      Endpoints:
+        - order-rpc-svc.app.svc.cluster.local:9091
+    UserRpc:
+      Endpoints:
+        - user-rpc-svc.app.svc.cluster.local:9090
 
 ---
 apiVersion: apps/v1
@@ -37,7 +43,7 @@ spec:
       - name: order-rpc
         image: babyandy0111/infar-order-rpc:v1
         ports:
-        - containerPort: 9091
+        - containerPort: 9889
         volumeMounts:
         - name: config
           mountPath: /app/etc
@@ -54,7 +60,7 @@ metadata:
   namespace: app
 spec:
   ports:
-  - port: 9091
-    targetPort: 9091
+  - port: 9889
+    targetPort: 9889
   selector:
     app: order-rpc

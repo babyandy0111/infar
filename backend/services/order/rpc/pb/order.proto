@@ -8,12 +8,18 @@ option go_package = "./pb";
 // =======================
 
 message CreateReq {
-    string data = 1; // TODO: 替換為實際新增欄位
+    int32 user_id = 2;
+    string order_no = 3;
+    double amount = 4;
+    string status = 5;
 }
 
 message UpdateReq {
     int64 id = 1;
-    string data = 2; // TODO: 替換為實際更新欄位
+    int32 user_id = 2;
+    string order_no = 3;
+    double amount = 4;
+    string status = 5;
 }
 
 message DeleteReq {

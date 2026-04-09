@@ -4,7 +4,10 @@
 package types
 
 type CreateReq struct {
-	Data string `json:"data"` // TODO: 替換為實際新增欄位
+	UserId  int32   `json:"user_id"`
+	OrderNo string  `json:"order_no"`
+	Amount  float64 `json:"amount"`
+	Status  string  `json:"status"`
 }
 
 type DeleteReq struct {
@@ -28,8 +31,11 @@ type Response struct {
 }
 
 type UpdateReq struct {
-	Id   int64  `json:"id"`
-	Data string `json:"data"` // TODO: 替換為實際更新欄位
+	Id      int64   `json:"id"`
+	UserId  int32   `json:"user_id"`
+	OrderNo string  `json:"order_no"`
+	Amount  float64 `json:"amount"`
+	Status  string  `json:"status"`
 }
 
 type UpdateStatusReq struct {

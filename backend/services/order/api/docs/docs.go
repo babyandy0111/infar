@@ -231,9 +231,17 @@ const docTemplate = `{
         "types.CreateReq": {
             "type": "object",
             "properties": {
-                "data": {
-                    "description": "TODO: 替換為實際新增欄位",
+                "amount": {
+                    "type": "number"
+                },
+                "order_no": {
                     "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "user_id": {
+                    "type": "integer"
                 }
             }
         },
@@ -252,11 +260,19 @@ const docTemplate = `{
         "types.UpdateReq": {
             "type": "object",
             "properties": {
-                "data": {
-                    "description": "TODO: 替換為實際更新欄位",
-                    "type": "string"
+                "amount": {
+                    "type": "number"
                 },
                 "id": {
+                    "type": "integer"
+                },
+                "order_no": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "user_id": {
                     "type": "integer"
                 }
             }
