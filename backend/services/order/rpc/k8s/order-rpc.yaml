@@ -6,18 +6,12 @@ metadata:
 data:
   order-rpc.yaml: |
     Name: order-rpc
-    Host: 0.0.0.0
-    Port: 9889
-    Auth:
-      AccessSecret: infar-secret-2026
-      AccessExpire: 86400
-    # 這裡的名稱會在腳本中處理，或是維持通用
-    OrderRpc:
-      Endpoints:
-        - order-rpc-svc.app.svc.cluster.local:9091
-    UserRpc:
-      Endpoints:
-        - user-rpc-svc.app.svc.cluster.local:9090
+    ListenOn: 0.0.0.0:9889
+    DataSource: host=postgres.infra.svc.cluster.local port=5432 user=infar_admin password=InfarDbPass123 dbname=infar_db sslmode=disable
+    CacheRedis:
+      - Host: redis-master.infra.svc.cluster.local:6379
+        Pass: InfarDbPass123
+        Type: node
 
 ---
 apiVersion: apps/v1

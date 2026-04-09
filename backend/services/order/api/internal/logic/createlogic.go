@@ -28,7 +28,6 @@ func NewCreateLogic(ctx context.Context, svcCtx *svc.ServiceContext) *CreateLogi
 
 func (l *CreateLogic) Create(req *types.CreateReq) (resp *types.Response, err error) {
 	// 1. 跨服務調用：調用 User RPC 驗證用戶是否存在
-	// 這裡我們把 req.UserId 傳給 user-rpc
 	userRes, err := l.svcCtx.UserRpc.UserInfo(l.ctx, &userclient.UserInfoRequest{
 		Id: int64(req.UserId),
 	})
@@ -42,7 +41,6 @@ func (l *CreateLogic) Create(req *types.CreateReq) (resp *types.Response, err er
 
 	l.Logger.Infof("✅ 跨服務調用成功！用戶暱稱: %s, 準備為其建立訂單: %s", userRes.Nickname, req.OrderNo)
 
-	// 這裡先不呼叫 OrderRpc，單純展示互通成功的回傳
 	return &types.Response{
 		Msg: fmt.Sprintf("跨服務驗證成功！歡迎 %s 建立訂單 %s", userRes.Nickname, req.OrderNo),
 	}, nil

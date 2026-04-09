@@ -1,4 +1,4 @@
-Name: pb.rpc
+Name: order.rpc
 ListenOn: 0.0.0.0:9889
 
 Log:
