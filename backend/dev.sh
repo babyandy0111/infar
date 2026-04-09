@@ -15,12 +15,18 @@ echo "========================================="
 echo "🚀 啟動 Infar Backend 智慧開發環境"
 echo "========================================="
 
-# 0. 暴力清理防禦機制 (防止 Port 被舊程序咬死)
-echo "🧹 正在清理舊的開發程序與佔用埠口..."
-# 殺掉 9090, 8888 以及未來可能增加的慣用埠口
-lsof -ti:9090,8888,9091,8889 2>/dev/null | xargs kill -9 2>/dev/null
-# 殺掉任何正在跑的 go run 實例 (確保沒孤兒進程)
-pkill -f "go run services" 2>/dev/null
+# 0. 暴力清理防禦機制 (動態偵測 Port)
+echo "🧹 正在動態清理舊的開發程序與佔用埠口..."
+# 殺掉所有正在跑的 go run 實例
+pkill -f "go run services" 2>/dev/null || true
+
+# 掃描所有 etc 下的 yaml，提取 Port: XXX 或 ListenOn: 0.0.0.0:XXX
+PORTS=$(grep -rE "Port:|ListenOn:" services/*/api/etc services/*/rpc/etc 2>/dev/null | awk -F': ' '{print $NF}' | grep -oE "[0-9]+" | sort -u | tr '\n' ',' | sed 's/,$//')
+
+if [ -n "$PORTS" ]; then
+    echo "   👉 偵測到服務埠口: [$PORTS]，正在清理..."
+    lsof -ti:$PORTS 2>/dev/null | xargs kill -9 2>/dev/null || true
+fi
 sleep 1
 
 # 1. 檢查並恢復基礎設施通道
