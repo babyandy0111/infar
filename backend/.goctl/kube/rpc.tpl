@@ -54,7 +54,7 @@ metadata:
   namespace: {{.Namespace}}
 spec:
   ports:
-  - port: {{.Port}}
+  - port: 9090
     targetPort: {{.Port}}
   selector:
     app: {{.Name}}

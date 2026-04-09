@@ -14,7 +14,7 @@ data:
     # 這裡的名稱會在腳本中處理，或是維持通用
     OrderRpc:
       Endpoints:
-        - order-rpc-svc.{{.Namespace}}.svc.cluster.local:9091
+        - order-rpc-svc.{{.Namespace}}.svc.cluster.local:9090
     UserRpc:
       Endpoints:
         - user-rpc-svc.{{.Namespace}}.svc.cluster.local:9090

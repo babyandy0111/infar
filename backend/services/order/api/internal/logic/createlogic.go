@@ -41,6 +41,7 @@ func (l *CreateLogic) Create(req *types.CreateReq) (resp *types.Response, err er
 
 	l.Logger.Infof("✅ 跨服務調用成功！用戶暱稱: %s, 準備為其建立訂單: %s", userRes.Nickname, req.OrderNo)
 
+	// 這裡先不呼叫 OrderRpc，單純展示互通成功的回傳
 	return &types.Response{
 		Msg: fmt.Sprintf("跨服務驗證成功！歡迎 %s 建立訂單 %s", userRes.Nickname, req.OrderNo),
 	}, nil
