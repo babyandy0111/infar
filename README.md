@@ -94,6 +94,12 @@ kubectl exec -i postgres-0 -c postgresql -n infra -- env PGPASSWORD=InfarDbPass1
 cd backend
 ./gen_service.sh product products 890
 ```
+> **🛡️ 防呆機制 (Safety First)**：
+> 若該服務（如 `product`）已存在，腳本會**拒絕執行**，以保護您已撰寫的業務邏輯不被洗掉。
+> * **局部更新**：若您只是加了資料表欄位，請參考下方的「手動更新代碼」流程。
+> * **強制重建**：若您確信要徹底覆蓋重建，請加上 `--force` 參數：
+>   `./gen_service.sh --force product products 890`
+
 > **🪄 腳本會展現什麼魔法？**
 > 1. 自動讀取 DB 欄位，產生帶有 Redis 快取機制的 `Model`。
 > 2. 自動將 DB 欄位轉換成 `.api` 與 `.proto` 的請求結構。
@@ -162,6 +168,22 @@ rpcResp, err := l.svcCtx.ProductRpc.Create(l.ctx, &product.CreateReq{
 *   **動態清場**: 自動清理 Port 佔用。
 *   **通道修復**: 自動修復 K8s 隧道。
 *   **秒殺終止**: 按下一次 Ctrl+C 即可清空所有子程序。
+
+### 4.2 🔄 手動更新代碼 (局部更新)
+當服務已存在，且您只是修改了 `.api`, `.proto` 或資料庫結構時，為了避免 `--force` 覆蓋掉自定義設定，請進行「局部手動更新」（請在 `backend/` 根目錄下執行，務必帶上 `--home .goctl`）：
+
+*   **更新 RPC (改了 `.proto` 後)**:
+    ```bash
+    goctl rpc protoc services/xxx/rpc/pb/xxx.proto --proto_path=services/xxx/rpc/pb --go_out=services/xxx/rpc --go-grpc_out=services/xxx/rpc --zrpc_out=services/xxx/rpc -c --home .goctl
+    ```
+*   **更新 API (改了 `.api` 後)**:
+    ```bash
+    goctl api go -api services/xxx/api/desc/xxx.api -dir services/xxx/api --home .goctl
+    ```
+*   **更新 Model (改了 DB 後)**:
+    ```bash
+    goctl model pg datasource -url "postgres://infar_admin:InfarDbPass123@127.0.0.1:5432/infar_db?sslmode=disable" -t "您的表名" -dir services/xxx/model -c
+    ```
 
 ---
 
