@@ -37,12 +37,63 @@
 │   ├── apihub.go                   # 🌐 統一文檔中心：整合所有微服務的 Swagger
 │   ├── init.sql                    # 🗄️ 全域資料庫初始化定義
 │   └── go.mod                      # 後端統一依賴管理
-└── frontend/                       # 【前端應用層 - 開發中】
+└── frontend/                       # 【前端應用層】
+    └── admin/                      # 後台管理系統 (Vite + React)
 ```
 
 ---
 
-## 🛠 2. 基礎設施部署指南 (Infrastructure Guide)
+## 💻 2. 前端開發與部署指南 (Frontend Guide)
+
+目前前端採用 **Vite + React (TypeScript)** 建構，並採 **CSR (Client-Side Rendering)** 架構。
+
+### 2.1 本地開發 (Local Development)
+前端透過 Vite 的 Proxy 設定解決 CORS 問題，並直接代理請求到本地的 K8s 通道。
+
+1. **啟動後端服務**:
+   確保已經執行 `cd backend && ./dev.sh` 啟動所有微服務與 API Hub。
+2. **啟動前端伺服器**:
+   ```bash
+   cd frontend/admin
+   npm install
+   npm run dev
+   ```
+3. 打開 `http://localhost:5173` 即可開始開發與測試。
+
+### 2.2 貨櫃化與發佈 (Docker Build & Push)
+前端的部署採**去中心化**管理，`Dockerfile` 與 Nginx 設定皆位於 `frontend/admin` 目錄下。
+當代碼修改後，必須重新打包並推送到 Docker Hub。
+
+> **⚠️ 注意: 避免快取陷阱**
+> 請務必加上 `--no-cache` 參數，確保最新的 `nginx.conf` 與靜態檔案被正確打包。
+
+```bash
+cd frontend/admin
+docker build --no-cache -t <your-dockerhub-user>/infar-admin-frontend:v1 .
+docker push <your-dockerhub-user>/infar-admin-frontend:v1
+```
+
+### 2.3 部署至 K8s (Kubernetes Deployment)
+前端的 K8s 資源定義於 `frontend/admin/k8s/admin.yaml`，包含 Deployment 與 Service。
+
+1. **套用變更** (或交由 ArgoCD 自動同步):
+   ```bash
+   kubectl apply -f frontend/admin/k8s/admin.yaml -n app
+   ```
+2. **強制更新 Pod**:
+   由於我們在 `admin.yaml` 中設定了 `imagePullPolicy: Always`，推播新 Image 後只需重啟 Deployment 即可抓取最新版本：
+   ```bash
+   kubectl rollout restart deployment admin-frontend -n app
+   ```
+3. **驗證與存取**:
+   ```bash
+   kubectl port-forward svc/admin-frontend-svc 5173:80 -n app
+   ```
+   打開 `http://localhost:5173` 即可查看 K8s 內運行的前端網頁。
+
+---
+
+## 🛠 3. 基礎設施部署指南 (Infrastructure Guide)
 
 我們支援 **Local**, **AWS**, **GCP** 三種環境，透過 `setup.sh` 實現環境對接。
 
@@ -161,7 +212,7 @@ rpcResp, err := l.svcCtx.ProductRpc.Create(l.ctx, &product.CreateReq{
 
 ---
 
-## 🚀 4. 日常開發運維指令 (DevX)
+## 🚀 5. 日常開發運維指令 (DevX)
 
 ### 4.1 🛠️ 智慧啟動神器 (`dev.sh`)
 進入 `backend/` 目錄執行 `./dev.sh`：
@@ -169,7 +220,7 @@ rpcResp, err := l.svcCtx.ProductRpc.Create(l.ctx, &product.CreateReq{
 *   **通道修復**: 自動修復 K8s 隧道。
 *   **秒殺終止**: 按下一次 Ctrl+C 即可清空所有子程序。
 
-### 4.2 🔄 手動更新代碼 (局部更新)
+### 5.2 🔄 手動更新代碼 (局部更新)
 當服務已存在，且您只是修改了 `.api`, `.proto` 或資料庫結構時，為了避免 `--force` 覆蓋掉自定義設定，請進行「局部手動更新」（請在 `backend/` 根目錄下執行，務必帶上 `--home .goctl`）：
 
 *   **更新 RPC (改了 `.proto` 後)**:
@@ -187,7 +238,7 @@ rpcResp, err := l.svcCtx.ProductRpc.Create(l.ctx, &product.CreateReq{
 
 ---
 
-## 💡 5. 開發陷阱與注意事項 (避坑指南)
+## 💡 6. 開發陷阱與注意事項 (避坑指南)
 
 1.  **Postgres ID 回傳**: 務必在 `model` 實作 `RETURNING id` (參考 `usersmodel.go`)。
 2.  **Nullable 欄位**: 資料庫的 `NULL` 在 Go 中會變成 `sql.NullString`，請使用 `.String` 取值。
