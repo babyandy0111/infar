@@ -16,6 +16,7 @@ spec:
       containers:
       - name: admin-frontend
         image: babyandy0111/infar-admin-frontend:v1
+        imagePullPolicy: Always
         ports:
         - containerPort: 80
 
