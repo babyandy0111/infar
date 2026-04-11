@@ -12,6 +12,10 @@ func CreateFlink(chart cdk8s.Chart) {
 	jmLabel := map[string]*string{"app": jsii.String("flink"), "component": jsii.String("jobmanager")}
 	tmLabel := map[string]*string{"app": jsii.String("flink"), "component": jsii.String("taskmanager")}
 
+	// 🚀 架構升級：使用我們自建的帶有驅動的 Image
+	// 你需要執行: docker build -t babyandy0111/infar-flink:v1 ./infra/docker/flink
+	flinkImage := jsii.String("babyandy0111/infar-flink:v1")
+
 	// JobManager Service
 	k8s.NewKubeService(chart, jsii.String("flink-jm-svc"), &k8s.KubeServiceProps{
 		Metadata: &k8s.ObjectMeta{Name: jsii.String("flink-jobmanager"), Namespace: jsii.String("infra")},
@@ -35,7 +39,7 @@ func CreateFlink(chart cdk8s.Chart) {
 					Labels: &jmLabel,
 					Annotations: &map[string]*string{
 						"linkerd.io/inject":              jsii.String("enabled"),
-						"config.linkerd.io/opaque-ports": jsii.String("6123"), // 避免 Linkerd 攔截 Flink RPC
+						"config.linkerd.io/opaque-ports": jsii.String("6123"),
 						"prometheus.io/scrape":           jsii.String("true"),
 						"prometheus.io/port":             jsii.String("4191"),
 					},
@@ -43,7 +47,7 @@ func CreateFlink(chart cdk8s.Chart) {
 				Spec: &k8s.PodSpec{
 					Containers: &[]*k8s.Container{{
 						Name:  jsii.String("jobmanager"),
-						Image: jsii.String("flink:1.18.1-java11"),
+						Image: flinkImage,
 						Args:  &[]*string{jsii.String("jobmanager")},
 						Ports: &[]*k8s.ContainerPort{
 							{ContainerPort: jsii.Number(6123)},
@@ -72,7 +76,7 @@ func CreateFlink(chart cdk8s.Chart) {
 					Labels: &tmLabel,
 					Annotations: &map[string]*string{
 						"linkerd.io/inject":              jsii.String("enabled"),
-						"config.linkerd.io/opaque-ports": jsii.String("6123"), // 避免 Linkerd 攔截 Flink RPC
+						"config.linkerd.io/opaque-ports": jsii.String("6123"),
 						"prometheus.io/scrape":           jsii.String("true"),
 						"prometheus.io/port":             jsii.String("4191"),
 					},
@@ -80,7 +84,7 @@ func CreateFlink(chart cdk8s.Chart) {
 				Spec: &k8s.PodSpec{
 					Containers: &[]*k8s.Container{{
 						Name:  jsii.String("taskmanager"),
-						Image: jsii.String("flink:1.18.1-java11"),
+						Image: flinkImage,
 						Args:  &[]*string{jsii.String("taskmanager")},
 						Env: &[]*k8s.EnvVar{
 							{
@@ -107,7 +111,6 @@ func CreateFlink(chart cdk8s.Chart) {
 	if isLocal {
 		host = jsii.String("flink.local")
 	} else {
-		// 在雲端不綁定特定 Host，直接用 IP 就能看
 		host = nil
 	}
 
