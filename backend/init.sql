@@ -170,6 +170,18 @@ COMMENT ON COLUMN "orders"."order_no" IS '訂單編號';
 COMMENT ON COLUMN "orders"."status" IS '訂單狀態';
 CREATE TRIGGER update_orders_updated_at BEFORE UPDATE ON orders FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
+-- 銷售統計表 (Flink 聚合結果)
+DROP TABLE IF EXISTS "sales_stats";
+CREATE TABLE "sales_stats" (
+    "product_id"    INTEGER      NOT NULL,
+    "total_orders"  BIGINT       NOT NULL DEFAULT 0,
+    "total_revenue" DECIMAL(15,2) NOT NULL DEFAULT 0,
+    "updated_at"    TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY ("product_id")
+);
+COMMENT ON TABLE "sales_stats" IS '商品即時銷售匯總表 (由 Flink 維護)';
+
+
 -- 商品表 (秒殺範例)
 DROP TABLE IF EXISTS "products";
 CREATE TABLE "products" (

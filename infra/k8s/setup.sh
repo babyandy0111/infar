@@ -191,16 +191,18 @@ fi
 
 echo "✅ 基礎設施 [$INFAR_CLOUD_PROVIDER] 已全自動同步完成！"
 
-echo "5. 🚀 建立本機資料庫捷徑 (Port-Forward)..."
-# 🚀 強化清理：殺掉所有佔用 5432 或 6379 的本機進程 (包含之前的舊通道)
+echo "5. 🚀 建立本機資料庫與訊息隊列捷徑 (Port-Forward)..."
+# 🚀 強化清理：殺掉所有佔用 5432, 6379 或 9092 的本機進程 (包含之前的舊通道)
 pkill -f "port-forward" > /dev/null 2>&1
 lsof -ti:5432 | xargs kill -9 > /dev/null 2>&1
 lsof -ti:6379 | xargs kill -9 > /dev/null 2>&1
+lsof -ti:9092 | xargs kill -9 > /dev/null 2>&1
 
 if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
     kubectl port-forward svc/postgres 5432:5432 -n infra > /dev/null 2>&1 &
     kubectl port-forward svc/redis-master 6379:6379 -n infra > /dev/null 2>&1 &
-    echo "   ✅ PostgreSQL (5432) 與 Redis (6379) 已透過 Service 在背景連通。"
+    kubectl port-forward svc/kafka-service 9092:9092 -n infra > /dev/null 2>&1 &
+    echo "   ✅ PostgreSQL (5432)、Redis (6379) 與 Kafka (9092) 已透過 Service 在背景連通。"
 else
     echo "   - 正在等待雲端跳板機 (Jump Pod) 啟動..."
     kubectl wait --for=condition=available deployment/jump -n infra --timeout=60s > /dev/null 2>&1

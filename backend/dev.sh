@@ -39,15 +39,18 @@ fi
 
 # 1. 恢復基礎設施通道 (使用獨立進程組)
 echo "🔍 檢查基礎設施連線..."
-for port in 5432 6379; do
+for port in 5432 6379 9092; do
     if ! nc -z 127.0.0.1 $port 2>/dev/null; then
         if [ "$port" == "5432" ]; then
             echo "   👉 啟動 Postgres 持久通道 (5432)..."
             # 使用 () & 配合 disown 徹底分離
             (kubectl port-forward svc/postgres 5432:5432 -n infra > /dev/null 2>&1 &)
-        else
+        elif [ "$port" == "6379" ]; then
             echo "   👉 啟動 Redis 持久通道 (6379)..."
             (kubectl port-forward svc/redis-master 6379:6379 -n infra > /dev/null 2>&1 &)
+        elif [ "$port" == "9092" ]; then
+            echo "   👉 啟動 Kafka 持久通道 (9092)..."
+            (kubectl port-forward svc/kafka-service 9092:9092 -n infra > /dev/null 2>&1 &)
         fi
         sleep 2
     fi
