@@ -6,11 +6,12 @@ import (
 	"log"
 	"os"
 
+	"infar-infra/imports/k8s"
+
 	"github.com/aws/constructs-go/constructs/v10"
 	"github.com/aws/jsii-runtime-go"
 	"github.com/cdk8s-team/cdk8s-core-go/cdk8s/v2"
 	"github.com/joho/godotenv"
-	"infar-infra/imports/k8s"
 
 	// 引入我們自己寫的模組
 	"infar-infra/pkg/cicd"
@@ -79,8 +80,7 @@ func main() {
 	}
 
 	NewInfarDatastore(app, "01-datastore", commonProps)
-	// 🚀 架構輕量化決策：暫停部署巨型串流模組 (Kafka, Flink)，改以 Redis Stream 取代
-	// NewInfarStreaming(app, "02-streaming", commonProps)
+	NewInfarStreaming(app, "02-streaming", commonProps)
 	NewInfarObservability(app, "03-observability", commonProps)
 	NewInfarCicd(app, "04-cicd", commonProps)
 
