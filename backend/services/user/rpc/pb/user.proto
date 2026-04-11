@@ -43,8 +43,18 @@ message UserInfoResponse {
   string address = 9;
 }
 
+// 批量使用者資訊 (解決 N+1)
+message BatchUserInfoRequest {
+  repeated int64 ids = 1;
+}
+
+message BatchUserInfoResponse {
+  repeated UserInfoResponse users = 1;
+}
+
 service User {
   rpc Register(RegisterRequest) returns (RegisterResponse);
   rpc Login(LoginRequest) returns (LoginResponse);
   rpc UserInfo(UserInfoRequest) returns (UserInfoResponse);
+  rpc BatchUserInfo(BatchUserInfoRequest) returns (BatchUserInfoResponse);
 }

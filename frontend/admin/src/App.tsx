@@ -31,8 +31,8 @@ function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: 0,
-          order_no: "string",
+          amount: 100,
+          order_no: "DEMO-" + Date.now(), // 👈 加上時間戳，確保訂單號唯一
           status: "string",
           user_id: 1
         })

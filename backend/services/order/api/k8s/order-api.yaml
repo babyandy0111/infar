@@ -11,13 +11,22 @@ data:
     Auth:
       AccessSecret: infar-secret-2026
       AccessExpire: 86400
-    # 這裡的名稱會在腳本中處理，或是維持通用
     OrderRpc:
       Endpoints:
         - order-rpc-svc.app.svc.cluster.local:9090
     UserRpc:
       Endpoints:
         - user-rpc-svc.app.svc.cluster.local:9090
+    # 🚀 補上 Kafka 內網位址
+    KqPusherConf:
+      Brokers:
+        - kafka-service.infra.svc.cluster.local:9092
+      Topic: order-create
+    # 🚀 補上 Redis 內網位址
+    Redis:
+      Host: redis-master.infra.svc.cluster.local:6379
+      Type: node
+      Pass: InfarDbPass123
 
 ---
 apiVersion: apps/v1
@@ -37,11 +46,12 @@ spec:
       labels:
         app: order-api
       annotations:
-        infar.io/config-last-updated: "20260406"
+        infar.io/config-last-updated: "20260411" # 👈 更新戳記，強制重啟 Pod
     spec:
       containers:
       - name: order-api
         image: babyandy0111/infar-order-api:v1
+        imagePullPolicy: Always # 👈 強制重新拉取
         ports:
         - containerPort: 8889
         volumeMounts:

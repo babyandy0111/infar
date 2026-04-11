@@ -11,12 +11,12 @@ import (
 func CreateFlink(chart cdk8s.Chart) {
 	jmLabel := map[string]*string{"app": jsii.String("flink"), "component": jsii.String("jobmanager")}
 	tmLabel := map[string]*string{"app": jsii.String("flink"), "component": jsii.String("taskmanager")}
+	jobLabel := map[string]*string{"app": jsii.String("flink"), "component": jsii.String("sql-runner")}
 
-	// 🚀 架構升級：使用我們自建的帶有驅動的 Image
-	// 你需要執行: docker build -t babyandy0111/infar-flink:v1 ./infra/docker/flink
 	flinkImage := jsii.String("babyandy0111/infar-flink:v1")
+	pullPolicy := jsii.String("Always")
 
-	// JobManager Service
+	// 1. JobManager Service
 	k8s.NewKubeService(chart, jsii.String("flink-jm-svc"), &k8s.KubeServiceProps{
 		Metadata: &k8s.ObjectMeta{Name: jsii.String("flink-jobmanager"), Namespace: jsii.String("infra")},
 		Spec: &k8s.ServiceSpec{
@@ -28,7 +28,7 @@ func CreateFlink(chart cdk8s.Chart) {
 		},
 	})
 
-	// JobManager Deployment
+	// 2. JobManager Deployment
 	k8s.NewKubeDeployment(chart, jsii.String("flink-jm-dep"), &k8s.KubeDeploymentProps{
 		Metadata: &k8s.ObjectMeta{Name: jsii.String("flink-jobmanager"), Namespace: jsii.String("infra")},
 		Spec: &k8s.DeploymentSpec{
@@ -46,9 +46,10 @@ func CreateFlink(chart cdk8s.Chart) {
 				},
 				Spec: &k8s.PodSpec{
 					Containers: &[]*k8s.Container{{
-						Name:  jsii.String("jobmanager"),
-						Image: flinkImage,
-						Args:  &[]*string{jsii.String("jobmanager")},
+						Name:            jsii.String("jobmanager"),
+						Image:           flinkImage,
+						ImagePullPolicy: pullPolicy,
+						Args:            &[]*string{jsii.String("jobmanager")},
 						Ports: &[]*k8s.ContainerPort{
 							{ContainerPort: jsii.Number(6123)},
 							{ContainerPort: jsii.Number(8081)},
@@ -58,6 +59,10 @@ func CreateFlink(chart cdk8s.Chart) {
 								Name:  jsii.String("JOB_MANAGER_RPC_ADDRESS"),
 								Value: jsii.String("flink-jobmanager.infra.svc.cluster.local"),
 							},
+							{
+								Name:  jsii.String("TASK_MANAGER_NUMBER_OF_TASK_SLOTS"),
+								Value: jsii.String("4"),
+							},
 						},
 					}},
 				},
@@ -65,7 +70,7 @@ func CreateFlink(chart cdk8s.Chart) {
 		},
 	})
 
-	// TaskManager Deployment
+	// 3. TaskManager Deployment
 	k8s.NewKubeDeployment(chart, jsii.String("flink-tm-dep"), &k8s.KubeDeploymentProps{
 		Metadata: &k8s.ObjectMeta{Name: jsii.String("flink-taskmanager"), Namespace: jsii.String("infra")},
 		Spec: &k8s.DeploymentSpec{
@@ -83,14 +88,70 @@ func CreateFlink(chart cdk8s.Chart) {
 				},
 				Spec: &k8s.PodSpec{
 					Containers: &[]*k8s.Container{{
-						Name:  jsii.String("taskmanager"),
-						Image: flinkImage,
-						Args:  &[]*string{jsii.String("taskmanager")},
+						Name:            jsii.String("taskmanager"),
+						Image:           flinkImage,
+						ImagePullPolicy: pullPolicy,
+						Args:            &[]*string{jsii.String("taskmanager")},
 						Env: &[]*k8s.EnvVar{
 							{
 								Name:  jsii.String("JOB_MANAGER_RPC_ADDRESS"),
 								Value: jsii.String("flink-jobmanager.infra.svc.cluster.local"),
 							},
+							{
+								Name:  jsii.String("TASK_MANAGER_NUMBER_OF_TASK_SLOTS"),
+								Value: jsii.String("4"),
+							},
+						},
+					}},
+				},
+			},
+		},
+	})
+
+	// 🚀 4. 自動任務啟動器 (SQL Runner Job) - 增強版
+	k8s.NewKubeJob(chart, jsii.String("flink-sql-runner"), &k8s.KubeJobProps{
+		Metadata: &k8s.ObjectMeta{Name: jsii.String("flink-sql-runner"), Namespace: jsii.String("infra")},
+		Spec: &k8s.JobSpec{
+			Template: &k8s.PodTemplateSpec{
+				Metadata: &k8s.ObjectMeta{Labels: &jobLabel},
+				Spec: &k8s.PodSpec{
+					RestartPolicy: jsii.String("OnFailure"),
+					Containers: &[]*k8s.Container{{
+						Name:            jsii.String("sql-runner"),
+						Image:           flinkImage,
+						ImagePullPolicy: pullPolicy,
+						Env: &[]*k8s.EnvVar{
+							{
+								Name:  jsii.String("FLINK_PROPERTIES"),
+								Value: jsii.String("jobmanager.rpc.address: flink-jobmanager.infra.svc.cluster.local\nrest.address: flink-jobmanager.infra.svc.cluster.local"),
+							},
+						},
+						Command: &[]*string{
+							jsii.String("sh"),
+							jsii.String("-c"),
+							jsii.String(`
+								echo "⏳ Waiting for Flink JobManager..."
+								until curl -s http://flink-jobmanager:8081/overview; do sleep 5; done
+								echo "🚀 Flink is up! Attempting to submit Order Processor SQL..."
+								
+								# 強制設定 SQL Client 連線位址
+								echo "rest.address: flink-jobmanager.infra.svc.cluster.local" >> /opt/flink/conf/flink-conf.yaml
+								
+								# 💡 加入重試機制，直到 SQL 提交成功 (避免資料庫連線尚未就緒的瞬時錯誤)
+								MAX_RETRIES=5
+								COUNT=0
+								until ./bin/sql-client.sh -f /opt/flink/jobs/order_processor.sql || [ $COUNT -eq $MAX_RETRIES ]; do
+									echo "⚠️  Submit failed, retrying in 10s... ($((COUNT+1))/$MAX_RETRIES)"
+									sleep 10
+									COUNT=$((COUNT+1))
+								done
+								
+								if [ $COUNT -eq $MAX_RETRIES ]; then
+									echo "❌ Failed to submit SQL after $MAX_RETRIES attempts."
+									exit 1
+								fi
+								echo "✅ SQL submitted successfully!"
+							`),
 						},
 					}},
 				},
@@ -114,7 +175,7 @@ func CreateFlink(chart cdk8s.Chart) {
 		host = nil
 	}
 
-	// Ingress
+	// 5. Ingress
 	k8s.NewKubeIngress(chart, jsii.String("flink-ing"), &k8s.KubeIngressProps{
 		Metadata: &k8s.ObjectMeta{
 			Name:        jsii.String("flink-ui"),

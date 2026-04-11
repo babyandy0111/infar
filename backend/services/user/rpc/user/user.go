@@ -14,17 +14,20 @@ import (
 )
 
 type (
-	LoginRequest     = pb.LoginRequest
-	LoginResponse    = pb.LoginResponse
-	RegisterRequest  = pb.RegisterRequest
-	RegisterResponse = pb.RegisterResponse
-	UserInfoRequest  = pb.UserInfoRequest
-	UserInfoResponse = pb.UserInfoResponse
+	BatchUserInfoRequest  = pb.BatchUserInfoRequest
+	BatchUserInfoResponse = pb.BatchUserInfoResponse
+	LoginRequest          = pb.LoginRequest
+	LoginResponse         = pb.LoginResponse
+	RegisterRequest       = pb.RegisterRequest
+	RegisterResponse      = pb.RegisterResponse
+	UserInfoRequest       = pb.UserInfoRequest
+	UserInfoResponse      = pb.UserInfoResponse
 
 	User interface {
 		Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 		Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginResponse, error)
 		UserInfo(ctx context.Context, in *UserInfoRequest, opts ...grpc.CallOption) (*UserInfoResponse, error)
+		BatchUserInfo(ctx context.Context, in *BatchUserInfoRequest, opts ...grpc.CallOption) (*BatchUserInfoResponse, error)
 	}
 
 	defaultUser struct {
@@ -51,4 +54,9 @@ func (m *defaultUser) Login(ctx context.Context, in *LoginRequest, opts ...grpc.
 func (m *defaultUser) UserInfo(ctx context.Context, in *UserInfoRequest, opts ...grpc.CallOption) (*UserInfoResponse, error) {
 	client := pb.NewUserClient(m.cli.Conn())
 	return client.UserInfo(ctx, in, opts...)
+}
+
+func (m *defaultUser) BatchUserInfo(ctx context.Context, in *BatchUserInfoRequest, opts ...grpc.CallOption) (*BatchUserInfoResponse, error) {
+	client := pb.NewUserClient(m.cli.Conn())
+	return client.BatchUserInfo(ctx, in, opts...)
 }

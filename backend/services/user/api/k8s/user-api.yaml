@@ -36,6 +36,7 @@ spec:
       containers:
       - name: user-api
         image: babyandy0111/infar-user-api:v1
+        imagePullPolicy: Always
         ports:
         - containerPort: 8888
         volumeMounts:

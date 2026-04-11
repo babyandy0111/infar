@@ -1,14 +1,18 @@
 Name: user.rpc
 ListenOn: 0.0.0.0:9090
 
-# K8s Local Port-forward 或 Jump Pod 的統一地址
+# 本地開發統一連線 127.0.0.1
 DataSource: postgres://infar_admin:InfarDbPass123@127.0.0.1:5432/infar_db?sslmode=disable
 
-# Cache Redis 設定
 CacheRedis:
   - Host: 127.0.0.1:6379
     Pass: InfarDbPass123
 
+# 秒殺 Demo 用 Redis
+BizRedis:
+  Host: 127.0.0.1:6379
+  Pass: InfarDbPass123
+  Type: node
+
 Log:
   Stat: false
-
