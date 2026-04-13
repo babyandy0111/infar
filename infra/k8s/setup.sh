@@ -181,7 +181,7 @@ if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
 
     echo "5. 更新本機 /etc/hosts..."
     TARGET_IP="127.0.0.1"
-    for domain in argocd.local grafana.local flink.local; do
+    for domain in argocd.local grafana.local flink.local clickhouse.local; do
         if ! grep -q "$domain" /etc/hosts; then
             echo "🌐 為 $domain 更新 /etc/hosts (需要密碼)..."
             echo "$TARGET_IP $domain" | sudo tee -a /etc/hosts > /dev/null
@@ -194,30 +194,34 @@ fi
 echo "✅ 基礎設施 [$INFAR_CLOUD_PROVIDER] 已全自動同步完成！"
 
 echo "5. 🚀 建立本機資料庫與訊息隊列捷徑 (Port-Forward)..."
-# 🚀 強化清理：殺掉所有佔用 5432, 6379 或 9092 的本機進程 (包含之前的舊通道)
+# 🚀 強化清理：殺掉所有佔用 5432, 6379, 8123 或 9092 的本機進程 (包含之前的舊通道)
 pkill -f "port-forward" > /dev/null 2>&1
 lsof -ti:5432 | xargs kill -9 > /dev/null 2>&1
 lsof -ti:6379 | xargs kill -9 > /dev/null 2>&1
+lsof -ti:8123 | xargs kill -9 > /dev/null 2>&1
 lsof -ti:9092 | xargs kill -9 > /dev/null 2>&1
 
 if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
     kubectl port-forward svc/postgres 5432:5432 -n infra > /dev/null 2>&1 &
     kubectl port-forward svc/redis-master 6379:6379 -n infra > /dev/null 2>&1 &
     kubectl port-forward svc/kafka-service 9092:9092 -n infra > /dev/null 2>&1 &
-    echo "   ✅ PostgreSQL (5432)、Redis (6379) 與 Kafka (9092) 已透過 Service 在背景連通。"
+    kubectl port-forward svc/clickhouse 8123:8123 -n infra > /dev/null 2>&1 &
+    echo "   ✅ PostgreSQL (5432)、Redis (6379)、Kafka (9092) 與 ClickHouse (8123) 已透過 Service 在背景連通。"
 else
     echo "   - 正在等待雲端跳板機 (Jump Pod) 啟動..."
     kubectl wait --for=condition=available deployment/jump -n infra --timeout=60s > /dev/null 2>&1
     echo "   - 正在建立雲端跳板通道..."
     kubectl port-forward deployment/jump 5432:5432 -n infra > /dev/null 2>&1 &
     kubectl port-forward deployment/jump 6379:6379 -n infra > /dev/null 2>&1 &
+    kubectl port-forward deployment/jump 8123:8123 -n infra > /dev/null 2>&1 &
     echo "   ✅ 雲端資料庫已透過 Jump Pod 在本機 (127.0.0.1) 背景連通。"
 fi
 
 if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
-    echo "👉 ArgoCD URL:  http://argocd.local (請確保已執行 minikube tunnel)"
-    echo "👉 Grafana URL: http://grafana.local"
-    echo "👉 Flink URL:   http://flink.local"
+    echo "👉 ArgoCD URL:     http://argocd.local (請確保已執行 minikube tunnel)"
+    echo "👉 Grafana URL:    http://grafana.local"
+    echo "👉 Flink URL:      http://flink.local"
+    echo "👉 ClickHouse URL: http://clickhouse.local/play"
 else
     echo "👉 雲端環境部署完成！請等待 Cloud LoadBalancer 建立。"
     echo "🔍 取得 ArgoCD 外部網址: kubectl get svc argocd-server -n argocd"

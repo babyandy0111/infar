@@ -26,9 +26,10 @@ func NewInfarDatastore(scope constructs.Construct, id string, props *cdk8s.Chart
 	_ = godotenv.Load(".env")
 	dbPass := os.Getenv("DB_PASSWORD")
 	redisPass := os.Getenv("REDIS_PASSWORD")
+	chPass := os.Getenv("CLICKHOUSE_PASSWORD")
 
-	if dbPass == "" || redisPass == "" {
-		log.Fatal("錯誤：.env 中缺少必須的資料庫密碼設定 (DB_PASSWORD 或 REDIS_PASSWORD)！")
+	if dbPass == "" || redisPass == "" || chPass == "" {
+		log.Fatal("錯誤：.env 中缺少必須的資料庫密碼設定 (DB_PASSWORD, REDIS_PASSWORD 或 CLICKHOUSE_PASSWORD)！")
 	}
 
 	// 建立 K8s Secret (安全管理密碼)
@@ -40,11 +41,13 @@ func NewInfarDatastore(scope constructs.Construct, id string, props *cdk8s.Chart
 		Data: &map[string]*string{
 			"postgresql-password": jsii.String(base64.StdEncoding.EncodeToString([]byte(dbPass))),
 			"redis-password":      jsii.String(base64.StdEncoding.EncodeToString([]byte(redisPass))),
+			"clickhouse-password": jsii.String(base64.StdEncoding.EncodeToString([]byte(chPass))),
 		},
 	})
 
 	datastore.CreatePostgreSQL(chart)
 	datastore.CreateRedis(chart)
+	datastore.CreateClickHouse(chart)
 	platform.CreateJumpPod(chart)
 	return chart
 }
