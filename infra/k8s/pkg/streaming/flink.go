@@ -85,7 +85,7 @@ func CreateFlink(chart cdk8s.Chart) {
 	k8s.NewKubeDeployment(chart, jsii.String("flink-tm-dep"), &k8s.KubeDeploymentProps{
 		Metadata: &k8s.ObjectMeta{Name: jsii.String("flink-taskmanager"), Namespace: jsii.String("infra")},
 		Spec: &k8s.DeploymentSpec{
-			Replicas: jsii.Number(1),
+			Replicas: jsii.Number(2),
 			Selector: &k8s.LabelSelector{MatchLabels: &tmLabel},
 			Template: &k8s.PodTemplateSpec{
 				Metadata: &k8s.ObjectMeta{

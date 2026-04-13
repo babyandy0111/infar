@@ -16,6 +16,7 @@ RUN wget -P /opt/flink/lib/ https://repo1.maven.org/maven2/org/apache/flink/flin
 # 注意：我們在執行 docker build 時，會透過 context 傳入 SQL 檔案
 RUN mkdir -p /opt/flink/jobs
 COPY order_processor.sql /opt/flink/jobs/
+COPY iot_processor.sql /opt/flink/jobs/
 
 # 權限修正
 RUN chown -R flink:flink /opt/flink/lib/*.jar /opt/flink/jobs/

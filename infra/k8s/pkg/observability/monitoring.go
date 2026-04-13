@@ -142,7 +142,7 @@ func CreateMonitoring(chart cdk8s.Chart) {
 
 	// 5. Linkerd Auth Policy (開放 Grafana 讀取 Linkerd 指標的權限)
 	serverObj := cdk8s.NewApiObject(chart, jsii.String("linkerd-server"), &cdk8s.ApiObjectProps{
-		ApiVersion: jsii.String("policy.linkerd.io/v1beta3"),
+		ApiVersion: jsii.String("policy.linkerd.io/v1beta1"),
 		Kind:       jsii.String("Server"),
 		Metadata:   &cdk8s.ApiObjectMetadata{Name: jsii.String("prometheus-admin"), Namespace: jsii.String("linkerd-viz")},
 	})

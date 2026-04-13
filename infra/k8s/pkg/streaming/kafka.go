@@ -3,9 +3,10 @@ package streaming
 import (
 	"os"
 
+	"infar-infra/imports/k8s"
+
 	"github.com/aws/jsii-runtime-go"
 	"github.com/cdk8s-team/cdk8s-core-go/cdk8s/v2"
-	"infar-infra/imports/k8s"
 )
 
 func CreateKafkaAndZookeeper(chart cdk8s.Chart) {
@@ -125,6 +126,8 @@ func CreateKafkaAndZookeeper(chart cdk8s.Chart) {
 							{Name: jsii.String("KAFKA_LISTENERS"), Value: jsii.String("PLAINTEXT://0.0.0.0:9092")},
 							{Name: jsii.String("KAFKA_ADVERTISED_LISTENERS"), Value: jsii.String("PLAINTEXT://kafka-service.infra.svc.cluster.local:9092")},
 							{Name: jsii.String("KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR"), Value: jsii.String("1")},
+							{Name: jsii.String("KAFKA_NUM_PARTITIONS"), Value: jsii.String("8")},
+							{Name: jsii.String("KAFKA_CREATE_TOPICS_ENABLE"), Value: jsii.String("true")},
 						},
 						VolumeMounts: &[]*k8s.VolumeMount{{Name: jsii.String("data"), MountPath: jsii.String("/kafka")}},
 					}},
