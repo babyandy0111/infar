@@ -46,10 +46,12 @@ CREATE TABLE postgres_sales_stats (
 );
 
 -- 🚀 任務 1：明細落盤
+SET 'parallelism.default' = '1';
 INSERT INTO postgres_orders
 SELECT user_id, order_no, amount, CAST(1 AS TINYINT) FROM kafka_orders;
 
 -- 🚀 任務 2：即時統計 (以商品為維度累計)
+SET 'parallelism.default' = '1';
 INSERT INTO postgres_sales_stats
 SELECT 
     product_id,
