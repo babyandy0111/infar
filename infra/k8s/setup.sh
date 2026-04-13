@@ -181,10 +181,12 @@ if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
 
     echo "5. 更新本機 /etc/hosts..."
     TARGET_IP="127.0.0.1"
-    if ! grep -q "argocd.local" /etc/hosts; then
-        echo "🌐 更新 /etc/hosts (需要密碼)..."
-        echo "$TARGET_IP argocd.local grafana.local flink.local" | sudo tee -a /etc/hosts > /dev/null
-    fi
+    for domain in argocd.local grafana.local flink.local; do
+        if ! grep -q "$domain" /etc/hosts; then
+            echo "🌐 為 $domain 更新 /etc/hosts (需要密碼)..."
+            echo "$TARGET_IP $domain" | sudo tee -a /etc/hosts > /dev/null
+        fi
+    done
 else
     echo "4. 跳過戰情室匯入與 hosts 更新 (雲端環境配置)..."
 fi

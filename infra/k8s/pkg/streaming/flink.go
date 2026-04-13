@@ -196,6 +196,11 @@ func CreateFlink(chart cdk8s.Chart) {
 		host = nil
 	}
 
+	var ingressClassName *string
+	if isLocal {
+		ingressClassName = jsii.String("nginx")
+	}
+
 	// 5. Ingress
 	k8s.NewKubeIngress(chart, jsii.String("flink-ing"), &k8s.KubeIngressProps{
 		Metadata: &k8s.ObjectMeta{
@@ -204,6 +209,7 @@ func CreateFlink(chart cdk8s.Chart) {
 			Annotations: &ingressAnnotations,
 		},
 		Spec: &k8s.IngressSpec{
+			IngressClassName: ingressClassName,
 			Rules: &[]*k8s.IngressRule{{
 				Host: host,
 				Http: &k8s.HttpIngressRuleValue{
