@@ -3,9 +3,10 @@ package streaming
 import (
 	"os"
 
+	"infar-infra/imports/k8s"
+
 	"github.com/aws/jsii-runtime-go"
 	"github.com/cdk8s-team/cdk8s-core-go/cdk8s/v2"
-	"infar-infra/imports/k8s"
 )
 
 func CreateFlink(chart cdk8s.Chart) {
@@ -50,6 +51,16 @@ func CreateFlink(chart cdk8s.Chart) {
 						Image:           flinkImage,
 						ImagePullPolicy: pullPolicy,
 						Args:            &[]*string{jsii.String("jobmanager")},
+						Resources: &k8s.ResourceRequirements{
+							Requests: &map[string]k8s.Quantity{
+								"cpu":    k8s.Quantity_FromString(jsii.String("500m")),
+								"memory": k8s.Quantity_FromString(jsii.String("1Gi")),
+							},
+							Limits: &map[string]k8s.Quantity{
+								"cpu":    k8s.Quantity_FromString(jsii.String("1")),
+								"memory": k8s.Quantity_FromString(jsii.String("2Gi")),
+							},
+						},
 						Ports: &[]*k8s.ContainerPort{
 							{ContainerPort: jsii.Number(6123)},
 							{ContainerPort: jsii.Number(8081)},
@@ -92,6 +103,16 @@ func CreateFlink(chart cdk8s.Chart) {
 						Image:           flinkImage,
 						ImagePullPolicy: pullPolicy,
 						Args:            &[]*string{jsii.String("taskmanager")},
+						Resources: &k8s.ResourceRequirements{
+							Requests: &map[string]k8s.Quantity{
+								"cpu":    k8s.Quantity_FromString(jsii.String("1")),
+								"memory": k8s.Quantity_FromString(jsii.String("2Gi")),
+							},
+							Limits: &map[string]k8s.Quantity{
+								"cpu":    k8s.Quantity_FromString(jsii.String("2")),
+								"memory": k8s.Quantity_FromString(jsii.String("4Gi")),
+							},
+						},
 						Env: &[]*k8s.EnvVar{
 							{
 								Name:  jsii.String("JOB_MANAGER_RPC_ADDRESS"),
