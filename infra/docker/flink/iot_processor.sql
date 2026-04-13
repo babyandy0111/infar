@@ -38,9 +38,23 @@ CREATE TABLE es_sensor_stats (
     'sink.flush-interval' = '5s'   -- 或者每 5 秒強制寫入一次
 );
 
--- 🚀 任務：每 1 分鐘計算一次「過去 5 分鐘」的平均值 (趨勢監控)
-SET 'parallelism.default' = '2'; -- 假設 IoT 數據量較大，開啟 2 個併發
+-- 3. 定義 ClickHouse Sink (大數據分析專用)
+CREATE TABLE clickhouse_sensor_stats (
+    device_id STRING,
+    avg_temp DOUBLE,
+    avg_hum DOUBLE,
+    window_start TIMESTAMP(3),
+    window_end TIMESTAMP(3)
+) WITH (
+    'connector' = 'jdbc',
+    'url' = 'jdbc:clickhouse://clickhouse.infra.svc.cluster.local:8123/infar_iot',
+    'table-name' = 'sensor_stats_sliding',
+    'username' = 'infar_admin',
+    'password' = 'InfarCHPass123' -- 與 .env.example 保持一致
+);
 
+-- 🚀 任務 1：寫入 Elasticsearch (搜尋與近期監控)
+SET 'parallelism.default' = '2'; 
 INSERT INTO es_sensor_stats
 SELECT 
     device_id,
@@ -49,7 +63,20 @@ SELECT
     HOP_START(ts, INTERVAL '1' MINUTE, INTERVAL '5' MINUTE) as window_start,
     HOP_END(ts, INTERVAL '1' MINUTE, INTERVAL '5' MINUTE) as window_end
 FROM kafka_sensors
--- 數據清洗：過濾掉感測器故障的異常極端值
+WHERE temperature BETWEEN -50 AND 150
+GROUP BY 
+    device_id, 
+    HOP(ts, INTERVAL '1' MINUTE, INTERVAL '5' MINUTE);
+
+-- 🚀 任務 2：寫入 ClickHouse (海量數據長期分析)
+INSERT INTO clickhouse_sensor_stats
+SELECT 
+    device_id,
+    AVG(temperature) as avg_temp,
+    AVG(humidity) as avg_hum,
+    HOP_START(ts, INTERVAL '1' MINUTE, INTERVAL '5' MINUTE) as window_start,
+    HOP_END(ts, INTERVAL '1' MINUTE, INTERVAL '5' MINUTE) as window_end
+FROM kafka_sensors
 WHERE temperature BETWEEN -50 AND 150
 GROUP BY 
     device_id, 
