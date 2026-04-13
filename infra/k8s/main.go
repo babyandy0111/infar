@@ -48,6 +48,7 @@ func NewInfarDatastore(scope constructs.Construct, id string, props *cdk8s.Chart
 	datastore.CreatePostgreSQL(chart)
 	datastore.CreateRedis(chart)
 	datastore.CreateClickHouse(chart)
+	datastore.CreateElasticsearch(chart)
 	platform.CreateJumpPod(chart)
 	return chart
 }

@@ -65,6 +65,7 @@ if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
     sudo sed -i '' '/grafana.local/d' /etc/hosts
     sudo sed -i '' '/flink.local/d' /etc/hosts
     sudo sed -i '' '/clickhouse.local/d' /etc/hosts
+    sudo sed -i '' '/elasticsearch.local/d' /etc/hosts
     echo "   ✅ /etc/hosts 已回復純淨。"
 
     # 詢問是否刪除 PVC
