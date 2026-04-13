@@ -57,13 +57,13 @@ if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
     if kubectl config get-contexts minikube >/dev/null 2>&1; then
         kubectl config use-context minikube >/dev/null
     fi
-    # 關閉所有資料庫通道
-    pkill -f "port-forward svc/postgres" > /dev/null 2>&1
-    pkill -f "port-forward svc/redis-master" > /dev/null 2>&1
+    # 關閉所有資料庫與訊息隊列通道
+    pkill -f "port-forward" > /dev/null 2>&1
     
     # 清理 /etc/hosts
     sudo sed -i '' '/argocd.local/d' /etc/hosts
     sudo sed -i '' '/grafana.local/d' /etc/hosts
+    sudo sed -i '' '/flink.local/d' /etc/hosts
     echo "   ✅ /etc/hosts 已回復純淨。"
 
     # 詢問是否刪除 PVC

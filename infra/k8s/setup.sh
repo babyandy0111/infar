@@ -183,7 +183,7 @@ if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
     TARGET_IP="127.0.0.1"
     if ! grep -q "argocd.local" /etc/hosts; then
         echo "🌐 更新 /etc/hosts (需要密碼)..."
-        echo "$TARGET_IP argocd.local grafana.local" | sudo tee -a /etc/hosts > /dev/null
+        echo "$TARGET_IP argocd.local grafana.local flink.local" | sudo tee -a /etc/hosts > /dev/null
     fi
 else
     echo "4. 跳過戰情室匯入與 hosts 更新 (雲端環境配置)..."
@@ -213,8 +213,9 @@ else
 fi
 
 if [ "$INFAR_CLOUD_PROVIDER" == "local" ]; then
-    echo "👉 ArgoCD URL: http://argocd.local (請確保已執行 minikube tunnel)"
+    echo "👉 ArgoCD URL:  http://argocd.local (請確保已執行 minikube tunnel)"
     echo "👉 Grafana URL: http://grafana.local"
+    echo "👉 Flink URL:   http://flink.local"
 else
     echo "👉 雲端環境部署完成！請等待 Cloud LoadBalancer 建立。"
     echo "🔍 取得 ArgoCD 外部網址: kubectl get svc argocd-server -n argocd"

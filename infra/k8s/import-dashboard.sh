@@ -8,6 +8,7 @@ GRAFANA_PASS=$(kubectl get secret --namespace observability "$GRAFANA_SECRET_NAM
 cat << 'JSON_EOF' > /tmp/infar-dashboard.json
 {
   "dashboard": {
+    "uid": "infar-microservices-war-room",
     "title": "Infar - Microservices War Room",
     "timezone": "browser",
     "refresh": "5s",
