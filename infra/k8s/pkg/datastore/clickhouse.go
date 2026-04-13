@@ -37,7 +37,14 @@ func CreateClickHouse(chart cdk8s.Chart) {
 			ServiceName: jsii.String("clickhouse"),
 			Selector:    &k8s.LabelSelector{MatchLabels: &label},
 			Template: &k8s.PodTemplateSpec{
-				Metadata: &k8s.ObjectMeta{Labels: &label},
+				Metadata: &k8s.ObjectMeta{
+					Labels: &label,
+					Annotations: &map[string]*string{
+						"linkerd.io/inject":    jsii.String("enabled"),
+						"prometheus.io/scrape": jsii.String("true"),
+						"prometheus.io/port":   jsii.String("8123"), // ClickHouse 有內建指標在 8123 (視配置而定)
+					},
+				},
 				Spec: &k8s.PodSpec{
 					Containers: &[]*k8s.Container{{
 						Name:  jsii.String("clickhouse"),

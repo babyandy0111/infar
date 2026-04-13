@@ -35,7 +35,14 @@ func CreateElasticsearch(chart cdk8s.Chart) {
 			ServiceName: jsii.String("elasticsearch-service"),
 			Selector:    &k8s.LabelSelector{MatchLabels: &label},
 			Template: &k8s.PodTemplateSpec{
-				Metadata: &k8s.ObjectMeta{Labels: &label},
+				Metadata: &k8s.ObjectMeta{
+					Labels: &label,
+					Annotations: &map[string]*string{
+						"linkerd.io/inject":    jsii.String("enabled"),
+						"prometheus.io/scrape": jsii.String("true"),
+						"prometheus.io/port":   jsii.String("9200"),
+					},
+				},
 				Spec: &k8s.PodSpec{
 					InitContainers: &[]*k8s.Container{
 						{
