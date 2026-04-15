@@ -17,6 +17,9 @@ type Config struct {
 	KqPusherConf struct {
 		Brokers []string
 		Topic   string
+		// 🚀 優化：生產者批次發送參數
+		ChunkSize     int `json:",optional,default=1024"`
+		FlushInterval int `json:",optional,default=100"` // ms
 	}
 	Redis redis.RedisConf
 }

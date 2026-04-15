@@ -22,6 +22,8 @@ data:
       Brokers:
         - kafka-service.infra.svc.cluster.local:9092
       Topic: order-create
+      ChunkSize: 1024
+      FlushInterval: 100
     # 🚀 補上 Redis 內網位址
     Redis:
       Host: redis-master.infra.svc.cluster.local:6379

@@ -38,7 +38,6 @@ func CreateElasticsearch(chart cdk8s.Chart) {
 				Metadata: &k8s.ObjectMeta{
 					Labels: &label,
 					Annotations: &map[string]*string{
-						"linkerd.io/inject":    jsii.String("enabled"),
 						"prometheus.io/scrape": jsii.String("true"),
 						"prometheus.io/port":   jsii.String("9200"),
 					},

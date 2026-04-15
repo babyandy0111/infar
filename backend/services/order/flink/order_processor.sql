@@ -2,6 +2,13 @@
 -- Flink 秒殺即時處理 Job (全功能版：落盤 + 每分鐘聚合統計)
 -- =============================================================================
 
+-- 🚀 Flink 效能優化參數
+SET 'pipeline.object-reuse' = 'true';                  -- 開啟物件重用，減少 GC 壓力
+SET 'table.exec.mini-batch.enabled' = 'true';          -- 開啟 MiniBatch，批次寫入下游資料庫
+SET 'table.exec.mini-batch.allow-latency' = '5 s';     -- 允許最大延遲 5 秒進行聚合
+SET 'table.exec.mini-batch.size' = '1000';             -- 每 1000 筆資料聚合一次
+SET 'parallelism.default' = '8';                       -- 配合 Kafka 的 8 個 Partition
+
 CREATE TABLE kafka_orders (
     user_id INT,
     product_id INT,
@@ -45,6 +52,8 @@ CREATE TABLE postgres_sales_stats (
     'password' = 'InfarDbPass123'
 );
 
+EXECUTE STATEMENT SET BEGIN
+
 -- 🚀 任務 1：明細落盤
 INSERT INTO postgres_orders
 SELECT user_id, order_no, amount, CAST(1 AS TINYINT) FROM kafka_orders;
@@ -57,3 +66,5 @@ SELECT
     SUM(amount) as total_revenue
 FROM kafka_orders
 GROUP BY product_id;
+
+END;

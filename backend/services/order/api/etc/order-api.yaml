@@ -22,6 +22,8 @@ KqPusherConf:
   Brokers:
     - 127.0.0.1:9092
   Topic: order-create
+  ChunkSize: 1024
+  FlushInterval: 100
 
 # 🚀 秒殺核心：Redis (本機開發強制使用 127.0.0.1)
 Redis:

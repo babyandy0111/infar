@@ -23,6 +23,7 @@ func CreateFlink(chart cdk8s.Chart) {
 		Spec: &k8s.ServiceSpec{
 			Ports: &[]*k8s.ServicePort{
 				{Name: jsii.String("rpc"), Port: jsii.Number(6123), TargetPort: k8s.IntOrString_FromNumber(jsii.Number(6123))},
+				{Name: jsii.String("blob"), Port: jsii.Number(6124), TargetPort: k8s.IntOrString_FromNumber(jsii.Number(6124))},
 				{Name: jsii.String("ui"), Port: jsii.Number(8081), TargetPort: k8s.IntOrString_FromNumber(jsii.Number(8081))},
 			},
 			Selector: &jmLabel,
@@ -39,10 +40,8 @@ func CreateFlink(chart cdk8s.Chart) {
 				Metadata: &k8s.ObjectMeta{
 					Labels: &jmLabel,
 					Annotations: &map[string]*string{
-						"linkerd.io/inject":              jsii.String("enabled"),
-						"config.linkerd.io/opaque-ports": jsii.String("6123"),
-						"prometheus.io/scrape":           jsii.String("true"),
-						"prometheus.io/port":             jsii.String("4191"),
+						"prometheus.io/scrape": jsii.String("true"),
+						"prometheus.io/port":   jsii.String("4191"),
 					},
 				},
 				Spec: &k8s.PodSpec{
@@ -63,6 +62,7 @@ func CreateFlink(chart cdk8s.Chart) {
 						},
 						Ports: &[]*k8s.ContainerPort{
 							{ContainerPort: jsii.Number(6123)},
+							{ContainerPort: jsii.Number(6124)},
 							{ContainerPort: jsii.Number(8081)},
 						},
 						Env: &[]*k8s.EnvVar{
@@ -91,10 +91,8 @@ func CreateFlink(chart cdk8s.Chart) {
 				Metadata: &k8s.ObjectMeta{
 					Labels: &tmLabel,
 					Annotations: &map[string]*string{
-						"linkerd.io/inject":              jsii.String("enabled"),
-						"config.linkerd.io/opaque-ports": jsii.String("6123"),
-						"prometheus.io/scrape":           jsii.String("true"),
-						"prometheus.io/port":             jsii.String("4191"),
+						"prometheus.io/scrape": jsii.String("true"),
+						"prometheus.io/port":   jsii.String("4191"),
 					},
 				},
 				Spec: &k8s.PodSpec{

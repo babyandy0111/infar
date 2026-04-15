@@ -2,6 +2,13 @@
 -- Flink 秒殺即時處理 Job (全功能版：落盤 + 每分鐘聚合統計)
 -- =============================================================================
 
+-- 🚀 Flink 效能優化參數
+SET 'pipeline.object-reuse' = 'true';
+SET 'table.exec.mini-batch.enabled' = 'true';
+SET 'table.exec.mini-batch.allow-latency' = '5 s';
+SET 'table.exec.mini-batch.size' = '1000';
+SET 'parallelism.default' = '8';
+
 CREATE TABLE kafka_orders (
     user_id INT,
     product_id INT,
@@ -45,13 +52,13 @@ CREATE TABLE postgres_sales_stats (
     'password' = 'InfarDbPass123'
 );
 
+EXECUTE STATEMENT SET BEGIN
+
 -- 🚀 任務 1：明細落盤
-SET 'parallelism.default' = '1';
 INSERT INTO postgres_orders
 SELECT user_id, order_no, amount, CAST(1 AS TINYINT) FROM kafka_orders;
 
 -- 🚀 任務 2：即時統計 (以商品為維度累計)
-SET 'parallelism.default' = '1';
 INSERT INTO postgres_sales_stats
 SELECT 
     product_id,
@@ -59,3 +66,5 @@ SELECT
     SUM(amount) as total_revenue
 FROM kafka_orders
 GROUP BY product_id;
+
+END;

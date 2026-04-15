@@ -1,6 +1,8 @@
 package svc
 
 import (
+	"time"
+
 	"infar/services/order/api/internal/config"
 	"infar/services/order/rpc/order"
 	"infar/services/user/rpc/userclient"
@@ -23,7 +25,12 @@ func NewServiceContext(c config.Config) *ServiceContext {
 		Config:   c,
 		OrderRpc: order.NewOrder(zrpc.MustNewClient(c.OrderRpc)),
 		UserRpc:  userclient.NewUser(zrpc.MustNewClient(c.UserRpc)),
-		KqPusher: kq.NewPusher(c.KqPusherConf.Brokers, c.KqPusherConf.Topic),
+		KqPusher: kq.NewPusher(
+			c.KqPusherConf.Brokers,
+			c.KqPusherConf.Topic,
+			kq.WithChunkSize(c.KqPusherConf.ChunkSize),
+			kq.WithFlushInterval(time.Duration(c.KqPusherConf.FlushInterval)*time.Millisecond),
+		),
 		BizRedis: redis.MustNewRedis(c.Redis),
 	}
 }

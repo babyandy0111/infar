@@ -53,9 +53,6 @@ func CreateKafkaAndZookeeper(chart cdk8s.Chart) {
 			Template: &k8s.PodTemplateSpec{
 				Metadata: &k8s.ObjectMeta{
 					Labels: &zkLabel,
-					Annotations: &map[string]*string{
-						"linkerd.io/inject": jsii.String("enabled"),
-					},
 				},
 				Spec: &k8s.PodSpec{
 					Containers: &[]*k8s.Container{{
@@ -65,6 +62,16 @@ func CreateKafkaAndZookeeper(chart cdk8s.Chart) {
 							{Name: jsii.String("ALLOW_ANONYMOUS_LOGIN"), Value: jsii.String("yes")},
 						},
 						Ports: &[]*k8s.ContainerPort{{ContainerPort: jsii.Number(2181)}},
+						Resources: &k8s.ResourceRequirements{
+							Limits: &map[string]k8s.Quantity{
+								"cpu":    k8s.Quantity_FromString(jsii.String("500m")),
+								"memory": k8s.Quantity_FromString(jsii.String("512Mi")),
+							},
+							Requests: &map[string]k8s.Quantity{
+								"cpu":    k8s.Quantity_FromString(jsii.String("250m")),
+								"memory": k8s.Quantity_FromString(jsii.String("256Mi")),
+							},
+						},
 						VolumeMounts: &[]*k8s.VolumeMount{
 							{Name: jsii.String("data"), MountPath: jsii.String("/data")},
 						},
@@ -102,10 +109,6 @@ func CreateKafkaAndZookeeper(chart cdk8s.Chart) {
 			Template: &k8s.PodTemplateSpec{
 				Metadata: &k8s.ObjectMeta{
 					Labels: &kLabel,
-					Annotations: &map[string]*string{
-						"linkerd.io/inject":              jsii.String("enabled"),
-						"config.linkerd.io/opaque-ports": jsii.String("9092,2181"),
-					},
 				},
 				Spec: &k8s.PodSpec{
 					InitContainers: &[]*k8s.Container{{
@@ -128,6 +131,21 @@ func CreateKafkaAndZookeeper(chart cdk8s.Chart) {
 							{Name: jsii.String("KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR"), Value: jsii.String("1")},
 							{Name: jsii.String("KAFKA_NUM_PARTITIONS"), Value: jsii.String("8")},
 							{Name: jsii.String("KAFKA_CREATE_TOPICS_ENABLE"), Value: jsii.String("true")},
+							// 🚀 優化：JVM Heap 設定 (建議為 Memory Limit 的 50%，剩下留給 Page Cache)
+							{Name: jsii.String("KAFKA_HEAP_OPTS"), Value: jsii.String("-Xmx512M -Xms512M")},
+							// 🚀 優化：日誌清理與效能參數
+							{Name: jsii.String("KAFKA_LOG_RETENTION_HOURS"), Value: jsii.String("24")},
+							{Name: jsii.String("KAFKA_LOG_SEGMENT_BYTES"), Value: jsii.String("536870912")}, // 512MB
+						},
+						Resources: &k8s.ResourceRequirements{
+							Limits: &map[string]k8s.Quantity{
+								"cpu":    k8s.Quantity_FromString(jsii.String("1000m")),
+								"memory": k8s.Quantity_FromString(jsii.String("1Gi")),
+							},
+							Requests: &map[string]k8s.Quantity{
+								"cpu":    k8s.Quantity_FromString(jsii.String("500m")),
+								"memory": k8s.Quantity_FromString(jsii.String("1Gi")),
+							},
 						},
 						VolumeMounts: &[]*k8s.VolumeMount{{Name: jsii.String("data"), MountPath: jsii.String("/kafka")}},
 					}},
